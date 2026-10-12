@@ -17,12 +17,11 @@ def check_normality(data: list[float]) -> None:
     intercept = cast(float, intercept)
     fitted_values = slope * theoretical_quantiles + intercept
 
-    plt.scatter(theoretical_quantiles, observed_values, label="Data")
+    plt.scatter(theoretical_quantiles, observed_values)
     plt.plot(
         theoretical_quantiles,
         fitted_values,
         color="red",
-        label="Normal reference line",
     )
 
     plt.xlabel("Z-Scores")
