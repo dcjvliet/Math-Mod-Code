@@ -55,23 +55,24 @@ slope, intercept = calc_regression_line(aa_x_values, aa_y_values, ax_x_values, a
 
 # now we want to update with each new fly
 rng = np.random.default_rng()
-mean_aa_antenna_length = np.mean(aa_y_values)
-mean_aa_wing_length = np.mean(aa_x_values)
-std_aa_antenna_length = np.std(aa_y_values)
-std_aa_wing_length = np.std(aa_x_values)
+aa_measurements = aa[:, [0, 2]]
+ax_measurements = ax[:, [0, 2]]
 
-mean_ax_antenna_length = np.mean(ax_y_values)
-mean_ax_wing_length = np.mean(ax_x_values)
-std_ax_antenna_length = np.std(ax_y_values)
-std_ax_wing_length = np.std(ax_x_values)
+aa_mean = aa_measurements.mean(axis=0)
+ax_mean = ax_measurements.mean(axis=0)
+
+aa_cov = np.cov(aa_measurements, rowvar=False)
+ax_cov = np.cov(ax_measurements, rowvar=False)
 
 correct_count = 0
 incorrect_count = 0
 for _ in range(2500):
-    aa_antenna_length = rng.normal(loc=mean_aa_antenna_length, scale=std_aa_antenna_length, size=1)
-    ax_antenna_length = rng.normal(loc=mean_ax_antenna_length, scale=std_ax_antenna_length, size=1)
-    aa_wing_length = rng.normal(loc=mean_aa_wing_length, scale=std_aa_wing_length, size=1)
-    ax_wing_length = rng.normal(loc=mean_ax_wing_length, scale=std_ax_wing_length, size=1)
+    aa_wing_length, aa_antenna_length = rng.multivariate_normal(
+        aa_mean, aa_cov
+    )
+    ax_wing_length, ax_antenna_length = rng.multivariate_normal(
+        ax_mean, ax_cov
+    )
 
     # now we see if it falls above (aa) or below (ax) the regression line
     expected_value = slope * aa_wing_length + intercept
@@ -87,10 +88,10 @@ for _ in range(2500):
         incorrect_count += 1
 
     # now we want to update the regression
-    aa_x_values.append(aa_wing_length[0])
-    aa_y_values.append(aa_antenna_length[0])
-    ax_x_values.append(ax_wing_length[0])
-    ax_y_values.append(ax_antenna_length[0])
+    aa_x_values.append(aa_wing_length)
+    aa_y_values.append(aa_antenna_length)
+    ax_x_values.append(ax_wing_length)
+    ax_y_values.append(ax_antenna_length)
     slope, intercept = calc_regression_line(aa_x_values, aa_y_values, ax_x_values, ax_y_values)
 
 # print out accuracy
