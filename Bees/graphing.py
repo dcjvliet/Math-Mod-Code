@@ -61,23 +61,6 @@ def time_to_month(t: float):
     return -1
 
 
-def find_exponent(t: float, means: list[float], stds: list[float]):
-    month = time_to_month(t)
-    if month == -1:
-        return -1
-    mean = means[month - 1]
-    std = stds[month - 1]
-    return (std / mean) ** -1.086
-
-
-def find_lambda(t: float, means: list[float], stds: list[float]):
-    month = time_to_month(t)
-    if month == -1:
-        return -1
-    mean = means[month - 1]
-    return mean / (math.gamma(1 + (1 / find_exponent(t, means, stds))))
-
-
 def _find_weibull_survival(age: float, mean: float, std: float):
     exponent = (std / mean) ** -1.086
     lambda_param = mean / math.gamma(1 + (1 / exponent))
