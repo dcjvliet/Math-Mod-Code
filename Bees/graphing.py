@@ -5,31 +5,24 @@ from matplotlib import pyplot as plt
 
 def egg_laying_rate(t: float):
     t_new = t % 365
-    if 0 <= t_new < 31:
-        return 83.3
-    elif 31 <= t_new < 59:
-        return 41.65
-    elif 59 <= t_new < 90:
-        return 0 
-    elif 90 <= t_new < 120:
-        return 200
-    elif 120 <= t_new < 151:
-        return 1000
-    elif 151 <= t_new < 181:
-        return 1300
-    elif 181 <= t_new < 212:
-        return 1600
-    elif 212 <= t_new < 243:
-        return 1300
-    elif 243 <= t_new < 273:
+    if 0 <= t_new < 15:
+        return 41.65 + (t_new / 30) * 83.3
+    if 15 <= t_new < 74:
+        return 83.3 - ((t_new - 15) / 30) * 41.65 
+    if 74 <= t_new < 105:
+        return 200 * ((t_new - 14) / 30) - 400
+    if 105 <= t_new < 136:
+        return 800 * ((t_new - 15) / 30) - 2200
+    if 136 <= t_new < 197:
+        return 300 * ((t_new - 16) / 30) - 200
+    if 197 <= t_new < 227:
+        return 3400 - 300 * ((t_new - 17) / 30)
+    if 227 <= t_new < 258:
+        return -1300 * ((t_new - 17) / 30) + 10400
+    if 258 <= t_new < 348:
         return 0
-    elif 273 <= t_new < 304:
-        return 0
-    elif 304 <= t_new < 334:
-        return 0
-    elif 334 <= t_new < 365:
-        return 0
-    return -1
+    else:
+        return 83.3 * ((t_new - 18) / 30) - 916.3
 
 
 def time_to_month(t: float):
