@@ -149,13 +149,15 @@ def find_weibull_survival_probability(age: float, mean: float, std: float) -> fl
     return np.exp(-(age / lambda_param) ** exponent)
 
 
-def find_population(t: int, gender: str = 'female') -> list[float]:
+def find_population(t: int, gender: str = 'female', growth_success_rate: float = 0.85) -> list[float]:
     """Find the population of a given bee gender at a given time
 
     :param t: The time since January 1st (in days)
     :type t: int
     :param gender: The gender of the bees to consider, defaults to 'female'
     :type gender: str, optional, 'female' or 'male'
+    :param growth_success_rate: The chance that a bee will survive to adulthood, defaults to 0.85
+    :type growth_success_rate: float, optional
     :return: The population of bees at each time step
     :rtype: list[float]
     """
@@ -164,14 +166,14 @@ def find_population(t: int, gender: str = 'female') -> list[float]:
         for current_day in range(t):
             population = 0
             for birth_day in range(current_day + 1):
-                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, get_female_means(birth_day), get_female_stds(birth_day))
+                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, get_female_means(birth_day), get_female_stds(birth_day)) * growth_success_rate
             populations_history.append(population)
     else:
         for current_day in range(t):
             population = 0
             for birth_day in range(current_day + 1):
                 # male bees we use the same mean of 26.5 and standard deviation of 5.5 for the entire year
-                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, 26.5, 5.5)
+                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, 26.5, 5.5) * growth_success_rate
             populations_history.append(population)
 
     return populations_history
@@ -220,4 +222,3 @@ if __name__ == '__main__':
 
     # graph
     display_graph(female_population_history, male_population_history, TIME_SPAN, last_year_only=False, show_month_ticks=True)
-    
