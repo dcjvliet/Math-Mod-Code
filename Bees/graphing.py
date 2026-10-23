@@ -4,25 +4,9 @@ from matplotlib import pyplot as plt
 
 
 def egg_laying_rate(t: float):
-    t_new = t % 365
-    if 0 <= t_new < 15:
-        return 41.67 + (t_new / 30) * 83.3
-    if 15 <= t_new < 74:
-        return 104.125 - 41.65 * (t_new / 30)
-    if 74 <= t_new < 105:
-        return 200 * (t_new / 30) - 500
-    if 105 <= t_new < 166:
-        return 800 * (t_new / 30) - 2600
-    if 166 <= t_new < 197:
-        return 300 * (t_new / 30) - 350
-    if 197 <= t_new < 227:
-        return 3550 - 300 * (t_new / 30)
-    if 227 <= t_new < 330:
-        return (-1300 / 3.5) * (t_new / 30) + (1300 / 3.5 * 11)
-    if 330 <= t_new < 348:
-        return 0
-    else:
-        return 83.3 * (t_new / 30) - 957.93
+    anchor_days = [0, 15, 74, 105, 166, 197, 228, 334, 350, 364]
+    anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0, 41.67]
+    return np.interp(t % 365, anchor_days, anchor_rates)
 
 
 def time_to_month(t: float):
