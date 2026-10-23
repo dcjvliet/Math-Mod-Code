@@ -4,9 +4,9 @@ from matplotlib import pyplot as plt
 
 
 def egg_laying_rate(t: float):
-    anchor_days = [0, 15, 74, 105, 166, 197, 228, 334, 350, 364]
-    anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0, 41.67]
-    return np.interp(t % 365, anchor_days, anchor_rates)
+    anchor_days = [0, 15, 74, 105, 166, 197, 228, 334, 350]
+    anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
+    return np.interp(t % 365, anchor_days, anchor_rates, period=365)
 
 
 def time_to_month(t: float):
@@ -35,61 +35,78 @@ def time_to_month(t: float):
         return 11
     elif 334 <= t_new < 365:
         return 12
-    return -1
+
+    raise ValueError(f"Invalid day of year: {t_new}")
 
 
-def _find_weibull_survival(age: float, mean: float, std: float):
+def find_weibull_survival(age: float, mean: float, std: float):
     exponent = (std / mean) ** -1.086
     lambda_param = mean / math.gamma(1 + (1 / exponent))
     return np.exp(-(age / lambda_param) ** exponent)
 
 
-def find_proportion_alive(age: float, birth_day: float, means: list[float], stds: list[float]):
-    birth_month = time_to_month(birth_day)
-    if birth_month == -1:
-        return -1
-
-    # Lifespan parameters describe the month in which the bee was born,
-    # rather than the month represented by its current age.
-    return _find_weibull_survival(age, means[birth_month - 1], stds[birth_month - 1])
-
-
-def find_population(t: int, means: list[float], stds: list[float]):
+def find_population(t: int, gender: str = 'female'):
     populations_history = []
-    for current_day in range(t):
-        population = 0
-        for birth_day in range(current_day + 1):
-            population += egg_laying_rate(birth_day) * find_proportion_alive(
-                current_day - birth_day, birth_day, means, stds
-            )
-        populations_history.append(population)
+    if gender == 'female':
+        for current_day in range(t):
+            population = 0
+            for birth_day in range(current_day + 1):
+                population += egg_laying_rate(birth_day) * find_weibull_survival(current_day - birth_day, get_female_means(birth_day), get_female_stds(birth_day))
+            populations_history.append(population)
+    else:
+        for current_day in range(t):
+            population = 0
+            for birth_day in range(current_day + 1):
+                population += egg_laying_rate(birth_day) * find_weibull_survival(current_day - birth_day, 26.5, 5.5)
+            populations_history.append(population)
+
     return populations_history
 
 
 def initial_population(t: int, starting_population: int):
     populations_history = []
     for current_day in range(t):
-        population = starting_population * find_proportion_alive(current_day, 0, [150] * 12, [30] * 12)
+        population = starting_population * find_weibull_survival(current_day, 150, 30)
         populations_history.append(population)
     return populations_history
 
+
+def get_female_means(t: int):
+    anchor_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
+    anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    return np.interp(t % 365, anchor_points, anchor_means, period=365)
+
+
+def get_female_stds(t: int):
+    anchor_stds = [30, 30, 30, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 30, 30, 30]
+    anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    return np.interp(t % 365, anchor_points, anchor_stds, period=365)
+
+
 if __name__ == '__main__':
-    female_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
-    female_stds = [30, 30, 30, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 30, 30, 30]
-    female_population_history = find_population(730, female_means, female_stds)
-    female_population_history = [x * 0.925 for x in female_population_history]
+    TIME_SPAN = 730 # days
+    INITIAL_POPULATION = 6000
+    FEMALE_PROPORTION = 0.925
+    MALE_PROPORTION = 0.075
 
-    male_means = [26.5] * 12
-    male_stds = [5.5] * 12
-    male_population_history = find_population(730, male_means, male_stds)
-    male_population_history = [x * 0.075 for x in male_population_history]
+    # find female population and scale by FEMALE_PROPORTION to account for male:female ratio
+    female_population_history = find_population(TIME_SPAN, gender='female')
+    female_population_history = [x * FEMALE_PROPORTION for x in female_population_history]
 
-    initial_population_history = initial_population(730, 6000)
+    # find male population and scale by MALE_PROPORTION to account for male:female ratio
+    male_population_history = find_population(TIME_SPAN, gender='male')
+    male_population_history = [x * MALE_PROPORTION for x in male_population_history]
 
+    # find initial population and how it falls off over time
+    initial_population_history = initial_population(TIME_SPAN, INITIAL_POPULATION)
+
+    # find total population of the hive
     total_population_history = [female + male + initial for female, male, initial in zip(female_population_history, male_population_history, initial_population_history)]
-    # all initial are female so add afterwards so we don't double count
+    
+    # all initial bees are female, so add to the female population history (after calculating total so we don't double count)
     female_population_history = [female + initial for female, initial in zip(female_population_history, initial_population_history)]
 
+    # graph
     plt.plot(female_population_history, label='Female')
     plt.plot(male_population_history, label='Male')
     plt.plot(total_population_history, label='Total')
@@ -97,5 +114,6 @@ if __name__ == '__main__':
     plt.xlabel('Days')
     plt.ylabel('Population')
     plt.legend()
+    plt.xlim(365, TIME_SPAN)
     plt.show()
     
