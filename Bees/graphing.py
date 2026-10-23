@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 
 
 def egg_laying_rate(t: float):
-    anchor_days = [0, 15, 74, 105, 166, 197, 228, 334, 350]
+    anchor_days = [0, 15, 74, 105, 166, 197, 228, 300, 350]
     anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
     return np.interp(t % 365, anchor_days, anchor_rates, period=365)
 
