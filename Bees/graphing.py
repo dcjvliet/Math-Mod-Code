@@ -83,14 +83,14 @@ def find_population(t: int, means: list[float], stds: list[float]):
 
 
 if __name__ == '__main__':
-    female_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
+    female_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 150, 150, 150, 150]
     female_stds = [23.5, 23.5, 23.5, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 23.5, 23.5, 23.5]
-    female_population_history = find_population(365, female_means, female_stds)
+    female_population_history = find_population(730, female_means, female_stds)
     female_population_history = [x * 0.925 for x in female_population_history]
 
     male_means = [26.5] * 12
     male_stds = [5.5] * 12
-    male_population_history = find_population(365, male_means, male_stds)
+    male_population_history = find_population(730, male_means, male_stds)
     male_population_history = [x * 0.075 for x in male_population_history]
 
     total_population_history = [female + male for female, male in zip(female_population_history, male_population_history)]
