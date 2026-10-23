@@ -17,9 +17,9 @@ def egg_laying_rate(t: float):
         return 300 * (t_new / 30) - 350
     if 197 <= t_new < 227:
         return 3550 - 300 * (t_new / 30)
-    if 227 <= t_new < 258:
-        return -1300 * (t_new / 30) + 11050
-    if 258 <= t_new < 348:
+    if 227 <= t_new < 330:
+        return (-1300 / 3.5) * (t_new / 30) + (1300 / 3.5 * 11)
+    if 330 <= t_new < 348:
         return 0
     else:
         return 83.3 * (t_new / 30) - 957.93
@@ -82,9 +82,16 @@ def find_population(t: int, means: list[float], stds: list[float]):
     return populations_history
 
 
+def initial_population(t: int, starting_population: int):
+    populations_history = []
+    for current_day in range(t):
+        population = starting_population * find_proportion_alive(current_day, 0, [150] * 12, [30] * 12)
+        populations_history.append(population)
+    return populations_history
+
 if __name__ == '__main__':
-    female_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 150, 150, 150, 150]
-    female_stds = [23.5, 23.5, 23.5, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 23.5, 23.5, 23.5]
+    female_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
+    female_stds = [30, 30, 30, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 30, 30, 30]
     female_population_history = find_population(730, female_means, female_stds)
     female_population_history = [x * 0.925 for x in female_population_history]
 
@@ -93,7 +100,11 @@ if __name__ == '__main__':
     male_population_history = find_population(730, male_means, male_stds)
     male_population_history = [x * 0.075 for x in male_population_history]
 
-    total_population_history = [female + male for female, male in zip(female_population_history, male_population_history)]
+    initial_population_history = initial_population(730, 6000)
+
+    total_population_history = [female + male + initial for female, male, initial in zip(female_population_history, male_population_history, initial_population_history)]
+    # all initial are female so add afterwards so we don't double count
+    female_population_history = [female + initial for female, initial in zip(female_population_history, initial_population_history)]
 
     plt.plot(female_population_history, label='Female')
     plt.plot(male_population_history, label='Male')
