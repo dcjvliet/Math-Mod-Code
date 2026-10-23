@@ -83,8 +83,8 @@ def find_population(t: int, means: list[float], stds: list[float]):
 
 
 if __name__ == '__main__':
-    means = [82.93, 62.74, 42.55, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 143.5, 123.31, 103.12]
-    stds = [13.58, 10.27, 6.97, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 23.5, 20.19, 16.89]
+    means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
+    stds = [23.5, 23.5, 23.5, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 23.5, 23.5, 23.5]
     population_history = find_population(365, means, stds)
 
     plt.plot(population_history)
