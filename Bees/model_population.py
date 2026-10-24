@@ -6,7 +6,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def display_graph(female_population: list[float], male_population: list[float], timespan: int, plot_total: bool = True, last_year_only: bool = False, show_month_ticks: bool = True, save_path: str = '', separate_by_life_stage: bool = False, baby_female_population: Optional[list[float]] = None, baby_male_population: Optional[list[float]] = None) -> None:
+def display_graph(female_population: list[float], 
+                  male_population: list[float], 
+                  timespan: int, plot_total: bool = True, 
+                  last_year_only: bool = False, 
+                  show_month_ticks: bool = True, 
+                  save_path: str = '', 
+                  separate_by_life_stage: bool = False, 
+                  baby_female_population: Optional[list[float]] = None, 
+                  baby_male_population: Optional[list[float]] = None,
+                  separate_graphs: bool = False) -> None:
     """A function for graphing the bee population over time.
 
     :param female_population: The female bee population over time (if separate_by_life_stage is True, this is the adult female population)
@@ -29,10 +38,105 @@ def display_graph(female_population: list[float], male_population: list[float], 
     :type baby_female_population: list[float], optional
     :param baby_male_population: The male baby bee population over time, defaults to None
     :type baby_male_population: list[float], optional
+    :param separate_graphs: If true, it creates separate graphs for each population, defaults to False
+    :type separate_graphs: bool, optional
     :raises ValueError: If separate_by_life_stage is True, baby_female_population and baby_male_population must be provided
     """
     # logic for getting x-axis date values
     days = range(min(len(female_population), len(male_population))) # these should be the same, but jic
+
+    if separate_graphs:
+        if separate_by_life_stage and (baby_female_population is None or baby_male_population is None):
+            raise ValueError("If separate_by_life_stage is True, baby_female_population and baby_male_population must be provided.")
+
+        graph_data = [
+            (female_population, baby_female_population, "Female", "red"),
+            (male_population, baby_male_population, "Male", "blue"),
+        ]
+
+        if plot_total:
+            total_adults = [female + male for female, male in zip(female_population, male_population)]
+
+            total_babies = None
+            if separate_by_life_stage:
+                total_babies = [female + male for female, male in zip(baby_female_population, baby_male_population)] # type: ignore
+
+            graph_data.append(
+                (total_adults, total_babies, "Total", "black")
+            )
+
+        month_starts = []
+        month_labels = []
+        if show_month_ticks:
+            month_start_days = [
+                0, 31, 59, 90, 120, 151,
+                181, 212, 243, 273, 304, 334
+            ]
+
+            for day in range(timespan + 1):
+                if day % 365 in month_start_days:
+                    month_starts.append(day)
+                    month_labels.append(
+                        calendar.month_abbr[
+                            month_start_days.index(day % 365) + 1
+                        ]
+                    )
+
+        fig = plt.figure(figsize=(16, 4 * len(graph_data)))
+
+        for index, (adults, babies, label, color) in enumerate(graph_data):
+            ax = fig.add_subplot(len(graph_data), 1, index + 1)
+
+            if separate_by_life_stage:
+                total = [baby + adult for baby, adult in zip(babies, adults)] # type: ignore
+
+                ax.plot(
+                    days, babies, label=f"{label} babies", # type: ignore
+                    color=color, linestyle=":", linewidth=2
+                )
+                ax.plot(
+                    days, adults, label=f"{label} adults",
+                    color=color, linestyle="--", linewidth=2
+                )
+                ax.plot(
+                    days, total, label=f"{label} population",
+                    color=color, linestyle="-", linewidth=2.5
+                )
+            else:
+                ax.plot(
+                    days, adults, label=f"{label} population",
+                    color=color, linewidth=2.5
+                )
+
+            ax.set_title(f"{label} Population", loc="left")
+            ax.set_xlabel("Time (days)")
+            ax.set_ylabel("Population")
+
+            # Put the legend above the plotting area.
+            ax.legend(
+                loc="lower right",
+                bbox_to_anchor=(1, 1.02),
+                ncol=3,
+                frameon=False,
+                borderaxespad=0
+            )
+
+            if show_month_ticks:
+                ax.set_xticks(
+                    month_starts, month_labels, rotation=45
+                )
+
+            if last_year_only:
+                ax.set_xlim(
+                    days[max(0, timespan - 365)], timespan
+                )
+
+        plt.tight_layout()
+        if save_path:
+            fig.savefig(save_path)
+
+        plt.show()
+        return
 
     # separate plots if we are separated by lifespan
     if not separate_by_life_stage:
@@ -89,6 +193,7 @@ def display_graph(female_population: list[float], male_population: list[float], 
     if save_path:
         plt.savefig(save_path)
     plt.show()
+    return
 
 
 def get_egg_laying_rate(t: float) -> float:
@@ -278,5 +383,6 @@ if __name__ == '__main__':
         show_month_ticks=True,
         separate_by_life_stage=True,
         baby_female_population=baby_female_population_history,
-        baby_male_population=baby_male_population_history
+        baby_male_population=baby_male_population_history,
+        separate_graphs=True
     )
