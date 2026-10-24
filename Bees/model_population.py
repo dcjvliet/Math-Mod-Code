@@ -1,37 +1,70 @@
 import math
 import calendar
+from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-def display_graph(female_population: list[float], male_population: list[float], timespan: int, last_year_only: bool = False, show_month_ticks: bool = True, save_path: str = '') -> None:
+def display_graph(female_population: list[float], male_population: list[float], timespan: int, plot_total: bool = True, last_year_only: bool = False, show_month_ticks: bool = True, save_path: str = '', separate_by_life_stage: bool = False, baby_female_population: Optional[list[float]] = None, baby_male_population: Optional[list[float]] = None) -> None:
     """A function for graphing the bee population over time.
 
-    :param female_population: The female bee population over time
+    :param female_population: The female bee population over time (if separate_by_life_stage is True, this is the adult female population)
     :type female_population: list[float]
-    :param male_population: The male bee population over time
+    :param male_population: The male bee population over time (if separate_by_life_stage is True, this is the adult male population)
     :type male_population: list[float]
     :param timespan: The number of days to graph data for
     :type timespan: int
+    :param plot_total: If true, it plots the total population as well, defaults to True
+    :type plot_total: bool, optional
     :param last_year_only: If true, it only graphs the last year of data, defaults to False
     :type last_year_only: bool, optional
     :param show_month_ticks: If true, it shows ticks on the x-axis for each month instead of the number of days, defaults to True
     :type show_month_ticks: bool, optional
     :param save_path: The path to save the graph (if not specified, the graph is not saved), defaults to ''
     :type save_path: str, optional
+    :param separate_by_life_stage: If true, it separates the population by life stage, defaults to False
+    :type separate_by_life_stage: bool, optional
+    :param baby_female_population: The female baby bee population over time, defaults to None
+    :type baby_female_population: list[float], optional
+    :param baby_male_population: The male baby bee population over time, defaults to None
+    :type baby_male_population: list[float], optional
+    :raises ValueError: If separate_by_life_stage is True, baby_female_population and baby_male_population must be provided
     """
     # logic for getting x-axis date values
-    days = range(max(len(female_population), len(male_population))) # these should be the same, but jic
+    days = range(min(len(female_population), len(male_population))) # these should be the same, but jic
 
-    plt.plot(days, female_population, label='Female Population', color='red', linewidth=2.5)
-    plt.plot(days, male_population, label='Male Population', color='blue', linewidth=2.5)
+    # separate plots if we are separated by lifespan
+    if not separate_by_life_stage:
+        plt.plot(days, female_population, label='Female Population', color='red', linewidth=2.5)
+        plt.plot(days, male_population, label='Male Population', color='blue', linewidth=2.5)
+        if plot_total:
+            total_population = [female + male for female, male in zip(female_population, male_population)]
+            plt.plot(days, total_population, label='Total Population', color='black', linewidth=2.5)
+    else:
+        # first check to make sure we actually have baby data
+        if baby_female_population is None or baby_male_population is None:
+            raise ValueError("If separate_by_life_stage is True, baby_female_population and baby_male_population must be provided.")
+
+        # print baby and adult populations for both
+        plt.plot(days, baby_female_population, label='Baby Female Population', color='red', linewidth=2, linestyle='--')
+        plt.plot(days, female_population, label='Adult Female Population', color='red', linewidth=2, linestyle=':')
+        plt.plot(days, baby_male_population, label='Baby Male Population', color='blue', linewidth=2, linestyle='--')
+        plt.plot(days, male_population, label='Adult Male Population', color='blue', linewidth=2, linestyle=':')
+        # if we are plotting totals, plot total female, total male, and total overall
+        if plot_total:
+            total_female_population = [baby + adult for baby, adult in zip(baby_female_population, female_population)]
+            total_male_population = [baby + adult for baby, adult in zip(baby_male_population, male_population)]
+            total_population = [female + male for female, male in zip(total_female_population, total_male_population)]
+
+            plt.plot(days, total_female_population, label='Total Female Population', color='red', linewidth=2.5)
+            plt.plot(days, total_male_population, label='Total Male Population', color='blue', linewidth=2.5)
+            plt.plot(days, total_population, label='Total Population', color='black', linewidth=2.5)
+
     plt.xlabel('Time (days)')
     plt.ylabel('Population')
     plt.title('Bee Population Over Time')
     plt.legend()
-    if last_year_only:
-        plt.xlim(days[max(0, timespan - 365)], timespan) # in case there isn't a year of data
 
     # show ticks for each month
     if show_month_ticks:
@@ -49,6 +82,9 @@ def display_graph(female_population: list[float], male_population: list[float], 
 
         plt.xticks(month_starts, month_labels, rotation=45)
 
+    if last_year_only:
+        plt.xlim(days[max(0, timespan - 365)], timespan) # in case there isn't a year of data
+        
     plt.tight_layout()
     if save_path:
         plt.savefig(save_path)
@@ -144,39 +180,45 @@ def find_weibull_survival_probability(age: float, mean: float, std: float) -> fl
     :return: The probability of survival at the given age
     :rtype: float
     """
+    # include this so that we don't double count deaths during the growth period since we already account for this
+    # in the transform_life_stage_population function
     exponent = (std / mean) ** -1.086
     lambda_param = mean / math.gamma(1 + (1 / exponent))
     return np.exp(-(age / lambda_param) ** exponent)
 
 
-def find_population(t: int, gender: str = 'female', growth_success_rate: float = 0.85) -> list[float]:
-    """Find the population of a given bee gender at a given time
+def find_life_stage_population(egg_history: np.ndarray, growth_duration: int, gender: str = 'female', growth_success_rate: float = 0.85) -> tuple[list[float], list[float]]:
+    # begin by calculating daily survival rate
+    daily_survival_rate = growth_success_rate ** (1 / growth_duration)
+    
+    brood_by_age = np.zeros(growth_duration)
+    baby_population_history = np.zeros(len(egg_history))
+    adult_population_history = np.zeros(len(egg_history))
 
-    :param t: The time since January 1st (in days)
-    :type t: int
-    :param gender: The gender of the bees to consider, defaults to 'female'
-    :type gender: str, optional, 'female' or 'male'
-    :param growth_success_rate: The chance that a bee will survive to adulthood, defaults to 0.85
-    :type growth_success_rate: float, optional
-    :return: The population of bees at each time step
-    :rtype: list[float]
-    """
-    populations_history = []
-    if gender == 'female':
-        for current_day in range(t):
-            population = 0
-            for birth_day in range(current_day + 1):
-                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, get_female_means(birth_day), get_female_stds(birth_day)) * growth_success_rate
-            populations_history.append(population)
-    else:
-        for current_day in range(t):
-            population = 0
-            for birth_day in range(current_day + 1):
-                # male bees we use the same mean of 26.5 and standard deviation of 5.5 for the entire year
-                population += get_egg_laying_rate(birth_day) * find_weibull_survival_probability(current_day - birth_day, 26.5, 5.5) * growth_success_rate
-            populations_history.append(population)
+    for day, eggs_today in enumerate(egg_history):
+        new_adults = brood_by_age[-1] * daily_survival_rate
+        brood_by_age[1:] = brood_by_age[:-1] * daily_survival_rate
+        brood_by_age[0] = eggs_today
+        baby_population_history[day] = brood_by_age.sum()
 
-    return populations_history
+        if new_adults > 0:
+            if gender == 'female':
+                mean = get_female_means(day)
+                std = get_female_stds(day)
+            else:
+                mean, std = 26.5, 5.5
+
+            for current_day in range(day, len(egg_history)):
+                adult_age = current_day - day
+
+                adult_population_history[current_day] += (
+                    new_adults
+                    * find_weibull_survival_probability(
+                        adult_age, mean, std
+                    )
+                )
+
+    return baby_population_history.tolist(), adult_population_history.tolist()
 
 
 def initial_population(t: int, starting_population: float) -> list[float]:
@@ -202,23 +244,39 @@ if __name__ == '__main__':
     INITIAL_POPULATION = 6000
     FEMALE_PROPORTION = 0.925
     MALE_PROPORTION = 0.075
+    FEMALE_GROWTH_DURATION = 21
+    MALE_GROWTH_DURATION = 24
+    GROWTH_SUCCESS_RATE = 0.85
+
+    # get the egg laying rate for the time period
+    egg_history = np.array([
+        get_egg_laying_rate(day) for day in range(TIME_SPAN)
+    ])
 
     # find female population and scale by FEMALE_PROPORTION to account for male:female ratio
-    female_population_history = find_population(TIME_SPAN, gender='female')
-    female_population_history = [x * FEMALE_PROPORTION for x in female_population_history]
+    baby_female_population_history, adult_female_population_history = find_life_stage_population(egg_history, growth_duration=FEMALE_GROWTH_DURATION, gender='female', growth_success_rate=GROWTH_SUCCESS_RATE)
+    baby_female_population_history = [female * FEMALE_PROPORTION for female in baby_female_population_history]
+    adult_female_population_history = [female * FEMALE_PROPORTION for female in adult_female_population_history]
 
     # find male population and scale by MALE_PROPORTION to account for male:female ratio
-    male_population_history = find_population(TIME_SPAN, gender='male')
-    male_population_history = [x * MALE_PROPORTION for x in male_population_history]
+    baby_male_population_history, adult_male_population_history = find_life_stage_population(egg_history, growth_duration=MALE_GROWTH_DURATION, gender='male', growth_success_rate=GROWTH_SUCCESS_RATE)
+    baby_male_population_history = [male * MALE_PROPORTION for male in baby_male_population_history]
+    adult_male_population_history = [male * MALE_PROPORTION for male in adult_male_population_history]
 
     # find initial population and how it falls off over time
     initial_population_history = initial_population(TIME_SPAN, INITIAL_POPULATION)
-
-    # find total population of the hive
-    total_population_history = [female + male + initial for female, male, initial in zip(female_population_history, male_population_history, initial_population_history)]
     
-    # all initial bees are female, so add to the female population history (after calculating total so we don't double count)
-    female_population_history = [female + initial for female, initial in zip(female_population_history, initial_population_history)]
+    # all initial bees are female, so add to the female population history
+    adult_female_population_history = [female + initial for female, initial in zip(adult_female_population_history, initial_population_history)]
 
     # graph
-    display_graph(female_population_history, male_population_history, TIME_SPAN, last_year_only=False, show_month_ticks=True)
+    display_graph(
+        adult_female_population_history,
+        adult_male_population_history,
+        TIME_SPAN,
+        last_year_only=False,
+        show_month_ticks=True,
+        separate_by_life_stage=True,
+        baby_female_population=baby_female_population_history,
+        baby_male_population=baby_male_population_history
+    )
