@@ -368,7 +368,14 @@ class BeePopulationModel:
         return populations_history
 
 
-    def main(self) -> None:
+    def main(self, graph: bool = True) -> tuple[list[float], list[float], list[float], list[float], list[float]]:
+        """Run the simulation and optionally graph the results
+
+        :param graph: Whether or not to graph the results, defaults to True
+        :type graph: bool, optional
+        :return: A tuple containing the population histories for each life stage (baby female, baby male, adult female, adult male, initial population)
+        :rtype: tuple[list[float], list[float], list[float], list[float], list[float]]
+        """
         # get the egg laying rate for the time period
         egg_history = np.array([
             self.get_egg_laying_rate(day) for day in range(self.TIME_SPAN)
@@ -391,14 +398,17 @@ class BeePopulationModel:
         adult_female_population_history = [female + initial for female, initial in zip(adult_female_population_history, initial_population_history)]
 
         # graph
-        self.display_graph(
-            adult_female_population_history,
-            adult_male_population_history,
-            self.TIME_SPAN,
-            last_year_only=False,
-            show_month_ticks=True,
-            separate_by_life_stage=True,
-            baby_female_population=baby_female_population_history,
-            baby_male_population=baby_male_population_history,
-            separate_graphs=True
-        )
+        if graph:
+            self.display_graph(
+                adult_female_population_history,
+                adult_male_population_history,
+                self.TIME_SPAN,
+                last_year_only=False,
+                show_month_ticks=True,
+                separate_by_life_stage=True,
+                baby_female_population=baby_female_population_history,
+                baby_male_population=baby_male_population_history,
+                separate_graphs=True
+            )
+
+        return baby_female_population_history, baby_male_population_history, adult_female_population_history, adult_male_population_history, initial_population_history
