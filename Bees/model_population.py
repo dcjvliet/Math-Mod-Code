@@ -293,6 +293,19 @@ def find_weibull_survival_probability(age: float, mean: float, std: float) -> fl
 
 
 def find_life_stage_population(egg_history: np.ndarray, growth_duration: int, gender: str = 'female', growth_success_rate: float = 0.85) -> tuple[list[float], list[float]]:
+    """Find the bee population over time, separated into babies and adults
+
+    :param egg_history: The number of eggs laid per day over the time period
+    :type egg_history: np.ndarray
+    :param growth_duration: How long it takes a baby bee to grow up
+    :type growth_duration: int
+    :param gender: The gender of bee to track the population of, defaults to 'female'
+    :type gender: str, optional
+    :param growth_success_rate: The chance a bee survives to adulthood, defaults to 0.85
+    :type growth_success_rate: float, optional
+    :return: Two lists containing the population over time. The first list is baby population, second list is adult population
+    :rtype: tuple[list[float], list[float]]
+    """
     # begin by calculating daily survival rate
     daily_survival_rate = growth_success_rate ** (1 / growth_duration)
     
