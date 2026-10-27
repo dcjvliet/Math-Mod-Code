@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 class BeePopulationModel:
-    def __init__(self, time_span: int = 730, initial_population: int = 6000, female_proportion: float = 0.925, male_proportion: float = 0.075, female_growth_duration: int = 21, male_growth_duration: int = 24, growth_success_rate: float = 0.85):
+    def __init__(self, time_span: int = 730, initial_population: int = 6000, female_proportion: float = 0.925, male_proportion: float = 0.075, female_growth_duration: int = 21, male_growth_duration: int = 24, growth_success_rate: float = 0.85, egg_laying_multiplier: float = 1):
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
         self.FEMALE_PROPORTION = female_proportion
@@ -15,7 +15,7 @@ class BeePopulationModel:
         self.FEMALE_GROWTH_DURATION = female_growth_duration
         self.MALE_GROWTH_DURATION = male_growth_duration
         self.GROWTH_SUCCESS_RATE = growth_success_rate
-
+        self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
 
     def display_graph(self, female_population: list[float], 
                     male_population: list[float], 
@@ -177,7 +177,7 @@ class BeePopulationModel:
                 plt.plot(days, total_population, label='Total Population', color='black', linewidth=2.5)
 
         plt.xlabel('Time (days)')
-        plt.ylabel('Population')
+        plt.ylabel('Population (Bees)')
         plt.title('Bee Population Over Time')
         plt.legend()
 
@@ -206,7 +206,6 @@ class BeePopulationModel:
         plt.show()
         return
 
-
     def get_egg_laying_rate(self, t: float) -> float:
         """Get the egg laying rate at a given time
 
@@ -217,8 +216,7 @@ class BeePopulationModel:
         """
         anchor_days = [0, 15, 74, 105, 166, 197, 228, 300, 350]
         anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
-        return np.interp(t % 365, anchor_days, anchor_rates, period=365)
-
+        return np.interp(t % 365, anchor_days, anchor_rates, period=365) * self.EGG_LAYING_MULTIPLIER
 
     def get_female_means(self, t: float) -> float:
         """Get the mean lifespan for a female bee at the specified time
@@ -232,7 +230,6 @@ class BeePopulationModel:
         anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         return np.interp(t % 365, anchor_points, anchor_means, period=365)
 
-
     def get_female_stds(self, t: float) -> float:
         """Get the standard deviation in lifespan for a female bee at the specified time
 
@@ -244,7 +241,6 @@ class BeePopulationModel:
         anchor_stds = [30, 30, 30, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 30, 30, 30]
         anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         return np.interp(t % 365, anchor_points, anchor_stds, period=365)
-
 
     def day_to_month(self, t: float) -> int:
         """Convert a day to a month (1-12)
@@ -283,7 +279,6 @@ class BeePopulationModel:
 
         raise ValueError(f"Invalid day of year: {t_new}")
 
-
     def find_weibull_survival_probability(self, age: float, mean: float, std: float) -> float:
         """A function to find the probability of survival at a given time using the Weibull survival function
 
@@ -301,7 +296,6 @@ class BeePopulationModel:
         exponent = (std / mean) ** -1.086
         lambda_param = mean / math.gamma(1 + (1 / exponent))
         return np.exp(-(age / lambda_param) ** exponent)
-
 
     def find_life_stage_population(self, egg_history: np.ndarray, growth_duration: int, gender: str = 'female', growth_success_rate: float = 0.85) -> tuple[list[float], list[float]]:
         """Find the bee population over time, separated into babies and adults
@@ -349,7 +343,6 @@ class BeePopulationModel:
 
         return baby_population_history.tolist(), adult_population_history.tolist()
 
-
     def initial_population(self, t: int, starting_population: float) -> list[float]:
         """Find the population of the initial bees at a given time
 
@@ -366,7 +359,6 @@ class BeePopulationModel:
             population = starting_population * self.find_weibull_survival_probability(current_day, 150, 30)
             populations_history.append(population)
         return populations_history
-
 
     def main(self, graph: bool = True) -> tuple[list[float], list[float], list[float], list[float], list[float]]:
         """Run the simulation and optionally graph the results
@@ -412,3 +404,78 @@ class BeePopulationModel:
             )
 
         return baby_female_population_history, baby_male_population_history, adult_female_population_history, adult_male_population_history, initial_population_history
+
+    def vary_egg_laying_rate(self, variation_range: float = 0.1, graph: bool = False) -> tuple[float, list[float]]:
+        # we want to see how the population changes if our egg laying rate is slightly off
+        # we will use peak population as a measure for each model
+        peak_populations = []
+        for i in range(101):
+            multiplier = 1 + (i - 50) * (variation_range / 50)
+            # create a new model with new egg laying rate
+            model = BeePopulationModel(egg_laying_multiplier=multiplier)
+            bf, bm, af, am, ip = model.main(graph=False)
+            total_population = [b + a + i + m + j for b, a, i, m, j in zip(bf, af, ip, bm, am)]
+            peak_populations.append(max(total_population))
+
+        # calculate its difference from a line
+        x = np.array([1 + (i - 50) * (variation_range / 50) for i in range(101)])
+        y = np.array(peak_populations)
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        error = 0
+        for x_value, y_value in zip(x, y):
+            error += abs(y_value - (m * x_value + c))
+
+        error /= len(x)
+
+        if graph:
+            plt.plot(x, y, color='green', linewidth=2.5, markers='o')
+            plt.xlabel('Egg Laying Rate Multiplier')
+            plt.ylabel('Peak Population (Bees)')
+            plt.title('Peak Population vs Egg Laying Rate Multiplier')
+            error_string = f'{error:.2e}'.replace('e', 'x10^').replace('+', '')
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.grid()
+            plt.show()
+
+        return error, peak_populations
+
+    def vary_growth_success_rate(self, variation_range: float = 0.1, graph: bool = False) -> tuple[float, list[float]]:
+        # we want to see how the population changes if our growth success rate is slightly off
+        # we will use peak population as a measure for each model
+        peak_populations = []
+        for i in range(101):
+            multiplier = (1 + (i - 50) * (variation_range / 50)) * 0.85 # 0.85 is our base growth success rate
+            # create a new model with new growth success rate
+            model = BeePopulationModel(growth_success_rate=multiplier)
+            bf, bm, af, am, ip = model.main(graph=False)
+            total_population = [b + a + i + m + j for b, a, i, m, j in zip(bf, af, ip, bm, am)]
+            peak_populations.append(max(total_population))
+
+        # calculate its difference from a line
+        x = np.array([(1 + (i - 50) * (variation_range / 50)) * 0.85 for i in range(101)])
+        y = np.array(peak_populations)
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        error = 0
+        for x_value, y_value in zip(x, y):
+            error += abs(y_value - (m * x_value + c))
+
+        error /= len(x)
+
+        if graph:
+            plt.plot(x, y, color='green', linewidth=2.5, markers='o')
+            plt.xlabel('Growth Success Rate')
+            plt.ylabel('Peak Population (Bees)')
+            plt.title('Peak Population vs Growth Success Rate')
+            error_string = f'{error:.2e}'.replace('e', 'x10^').replace('+', '')
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.grid()
+            plt.show()
+
+        return error, peak_populations
+
+
+if __name__ == '__main__':
+    model = BeePopulationModel()
+    model.vary_growth_success_rate(graph=True)
