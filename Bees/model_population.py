@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 class BeePopulationModel:
-    def __init__(self, time_span: int = 730, initial_population: int = 6000, female_proportion: float = 0.925, male_proportion: float = 0.075, female_growth_duration: int = 21, male_growth_duration: int = 24, growth_success_rate: float = 0.85, egg_laying_multiplier: float = 1):
+    def __init__(self, time_span: int = 730, initial_population: int = 6000, female_proportion: float = 0.925, male_proportion: float = 0.075, female_growth_duration: int = 21, male_growth_duration: int = 24, growth_success_rate: float = 0.85, egg_laying_multiplier: float = 1, zero_day: int = 300):
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
         self.FEMALE_PROPORTION = female_proportion
@@ -16,6 +16,7 @@ class BeePopulationModel:
         self.MALE_GROWTH_DURATION = male_growth_duration
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
+        self.ZERO_DAY = zero_day
 
     def display_graph(self, female_population: list[float], 
                     male_population: list[float], 
@@ -206,7 +207,7 @@ class BeePopulationModel:
         plt.show()
         return
 
-    def get_egg_laying_rate(self, t: float) -> float:
+    def get_egg_laying_rate(self, t: float, zero_point: int = 300) -> float:
         """Get the egg laying rate at a given time
 
         :param t: The time since january 1st in days
@@ -214,7 +215,7 @@ class BeePopulationModel:
         :return: The egg laying rate (per day)
         :rtype: float
         """
-        anchor_days = [0, 15, 74, 105, 166, 197, 228, 300, 350]
+        anchor_days = [0, 15, 74, 105, 166, 197, 228, zero_point, 350]
         anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
         return np.interp(t % 365, anchor_days, anchor_rates, period=365) * self.EGG_LAYING_MULTIPLIER
 
@@ -370,7 +371,7 @@ class BeePopulationModel:
         """
         # get the egg laying rate for the time period
         egg_history = np.array([
-            self.get_egg_laying_rate(day) for day in range(self.TIME_SPAN)
+            self.get_egg_laying_rate(day, self.ZERO_DAY) for day in range(self.TIME_SPAN)
         ])
 
         # find female population and scale by FEMALE_PROPORTION to account for male:female ratio
@@ -412,7 +413,7 @@ class BeePopulationModel:
         for i in range(101):
             multiplier = 1 + (i - 50) * (variation_range / 50)
             # create a new model with new egg laying rate
-            model = BeePopulationModel(egg_laying_multiplier=multiplier)
+            model = BeePopulationModel(egg_laying_multiplier=multiplier, initial_population=self.INITIAL_POPULATION)
             bf, bm, af, am, ip = model.main(graph=False)
             total_population = [b + a + i + m + j for b, a, i, m, j in zip(bf, af, ip, bm, am)]
             peak_populations.append(max(total_population))
@@ -429,7 +430,7 @@ class BeePopulationModel:
         error /= len(x)
 
         if graph:
-            plt.plot(x, y, color='green', linewidth=2.5, markers='o')
+            plt.plot(x, y, color='green', linewidth=2.5)
             plt.xlabel('Egg Laying Rate Multiplier')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Egg Laying Rate Multiplier')
@@ -447,7 +448,7 @@ class BeePopulationModel:
         for i in range(101):
             multiplier = (1 + (i - 50) * (variation_range / 50)) * 0.85 # 0.85 is our base growth success rate
             # create a new model with new growth success rate
-            model = BeePopulationModel(growth_success_rate=multiplier)
+            model = BeePopulationModel(growth_success_rate=multiplier, initial_population=self.INITIAL_POPULATION)
             bf, bm, af, am, ip = model.main(graph=False)
             total_population = [b + a + i + m + j for b, a, i, m, j in zip(bf, af, ip, bm, am)]
             peak_populations.append(max(total_population))
@@ -464,18 +465,70 @@ class BeePopulationModel:
         error /= len(x)
 
         if graph:
-            plt.plot(x, y, color='green', linewidth=2.5, markers='o')
+            plt.plot(x, y, color='green', linewidth=2.5)
             plt.xlabel('Growth Success Rate')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
             error_string = f'{error:.2e}'.replace('e', 'x10^').replace('+', '')
-            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.show()
 
         return error, peak_populations
 
+    def change_egg_laying_rate_end(self, graph: bool = False) -> list[float]:
+        peak_populations = []
+        for zero_day in range(229, 350):
+            model = BeePopulationModel(zero_day=zero_day, initial_population=self.INITIAL_POPULATION)
+            bf, bm, af, am, ip = model.main(graph=False)
+            total_population = [b + a + i + m + j for b, a, i, m, j in zip(bf, af, ip, bm, am)]
+            total_population = total_population[593:] # only look at population after egg laying rate starts declining until the end of the year
+            peak_populations.append(sum(total_population) / len(total_population)) # average population after egg laying rate starts declining
+
+        # calculate its difference from a line
+        x = np.array(range(229, 350))
+        y = np.array(peak_populations)
+        A = np.vstack([x, np.ones(len(x))]).T
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        error = 0
+        for x_value, y_value in zip(x, y):
+            error += abs(y_value - (m * x_value + c))
+
+        error /= len(x)
+        estimated_y = np.array([m * x_value + c for x_value in x])
+
+        if graph:
+            plt.plot(range(229, 350), peak_populations, color='blue', linewidth=2.5, label='Simulation Data')
+            plt.plot(x, estimated_y, color='green', linewidth=1.5, label='Linear Fit')
+            plt.xlabel('Day Egg Laying Rate Hits Zero (Zero Day)')
+            plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
+            plt.title('Average Population vs Zero Day')
+            error_string = f'{error:.2f}'
+            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.grid()
+
+            month_names = list(calendar.month_abbr)[1:]
+            month_starts = []
+            month_labels = []
+            month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+            for day in range(229, 350):
+                year_day = day % 365
+
+                if year_day in month_start_days:
+                    month_starts.append(day)
+                    month_labels.append(month_names[month_start_days.index(year_day)])
+
+            plt.xticks(month_starts, month_labels, rotation=45)
+
+            plt.legend()
+            plt.show()
+
+        return peak_populations
+
+    def vary_male_female_proportion(self, graph: bool = False) -> list[float]:
+        return []
 
 if __name__ == '__main__':
-    model = BeePopulationModel()
-    model.vary_growth_success_rate(graph=True)
+    model = BeePopulationModel(initial_population=15000)
+    model.change_egg_laying_rate_end(graph=True)
