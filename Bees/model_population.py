@@ -4,6 +4,9 @@ from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
+from matplotlib.ticker import PercentFormatter
 
 
 class BeePopulationModel:
@@ -428,6 +431,7 @@ class BeePopulationModel:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
+        error /= sum(y) / len(y) # normalize by mean
 
         if graph:
             plt.plot(x, y, color='green', linewidth=2.5)
@@ -435,7 +439,7 @@ class BeePopulationModel:
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Egg Laying Rate Multiplier')
             error_string = f'{error:.2e}'.replace('e', 'x10^').replace('+', '')
-            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.show()
 
@@ -463,6 +467,7 @@ class BeePopulationModel:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
+        error /= sum(y) / len(y) # normalize by mean
 
         if graph:
             plt.plot(x, y, color='green', linewidth=2.5)
@@ -470,7 +475,7 @@ class BeePopulationModel:
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
             error_string = f'{error:.2e}'.replace('e', 'x10^').replace('+', '')
-            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.show()
 
@@ -495,6 +500,7 @@ class BeePopulationModel:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
+        error /= sum(y) / len(y) # normalize by mean
         estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
@@ -504,7 +510,7 @@ class BeePopulationModel:
             plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
             plt.title('Average Population vs Zero Day')
             error_string = f'{error:.2f}'
-            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (MSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (NMSE):\n {error_string}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
 
             month_names = list(calendar.month_abbr)[1:]
@@ -526,9 +532,58 @@ class BeePopulationModel:
 
         return peak_populations
 
-    def vary_male_female_proportion(self, graph: bool = False) -> list[float]:
-        return []
+    def vary_male_female_proportion(self, lowest_male_proportion: float = 0.025, highest_male_proportion: float = 0.15, graph: bool = False) -> list[list[float]]:
+        population_histories = []
+
+        for male_proportion in np.linspace(lowest_male_proportion, highest_male_proportion, 100):
+            model = BeePopulationModel(female_proportion=1 - male_proportion, male_proportion=male_proportion, initial_population=self.INITIAL_POPULATION)
+
+            bf, bm, af, am, ip = model.main(graph=False)
+            total_population = np.sum(np.asarray([bf, bm, af, am, ip], dtype=float), axis=0).tolist()
+            population_histories.append(total_population)
+
+        if graph:
+            fig, ax = plt.subplots(figsize=(11, 6), constrained_layout=True)
+
+            cmap = plt.get_cmap("coolwarm")
+            norm = Normalize(vmin=lowest_male_proportion, vmax=highest_male_proportion)
+
+            for male_proportion, population_history in zip(np.linspace(lowest_male_proportion, highest_male_proportion, 100), population_histories):
+                ax.plot(
+                    np.arange(len(population_history)),
+                    population_history,
+                    color=cmap(norm(male_proportion)),
+                    linewidth=1,
+                    alpha=0.75,
+                )
+
+            colorbar = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+            colorbar.set_label("Proportion male")
+            colorbar.ax.yaxis.set_major_formatter(PercentFormatter(xmax=1))
+
+            ax.set_title("Bee Population Over Time by Male and Female Proportions")
+            ax.set_xlabel("Time (days)")
+            ax.set_ylabel("Total population (bees)")
+            ax.grid(True, alpha=0.25)
+
+            month_names = list(calendar.month_abbr)[1:]
+            month_starts = []
+            month_labels = []
+            month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+            for day in range(self.TIME_SPAN + 1): # so it does january
+                year_day = day % 365
+
+                if year_day in month_start_days:
+                    month_starts.append(day)
+                    month_labels.append(month_names[month_start_days.index(year_day)])
+
+            plt.xticks(month_starts, month_labels, rotation=45)
+
+            plt.show()
+
+        return population_histories
 
 if __name__ == '__main__':
     model = BeePopulationModel(initial_population=15000)
-    model.change_egg_laying_rate_end(graph=True)
+    model.vary_male_female_proportion(graph=True, lowest_male_proportion=0.01, highest_male_proportion=0.20)
