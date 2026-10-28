@@ -1,8 +1,4 @@
-from model_population import BeePopulationModel
-
-import math
 import calendar
-from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,6 +6,7 @@ from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.ticker import PercentFormatter
 
+from model_population import BeePopulationModel
 
 
 class SensitivityAnalysis:
@@ -106,12 +103,23 @@ class SensitivityAnalysis:
         estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
+            annotation_x = x[int(len(x) / 1.5)]
+            plt.annotate(
+                f"y = {m:.2f}x {'+' if c >= 0 else '-'} {abs(c):.2f}",
+                xy=(annotation_x, m * annotation_x + c),
+                xytext=(0.65, 0.4),
+                textcoords="axes fraction",
+                fontsize=16,
+                ha="center",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="blue"),
+                arrowprops=dict(arrowstyle="-", color="blue"),
+            )
+
             plt.plot(x, y, color='green', linewidth=2.5, label='Simulation Data')
-            plt.plot(x, estimated_y, color='blue', linewidth=1.5, label='Linear Fit')
             plt.xlabel('Egg Laying Rate Multiplier')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Egg Laying Rate Multiplier')
-            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n {error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -168,12 +176,23 @@ class SensitivityAnalysis:
         estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
+            annotation_x = x[int(len(x) / 1.5)]
+            plt.annotate(
+                f"y = {m:.2f}x {'+' if c >= 0 else '-'} {abs(c):.2f}",
+                xy=(annotation_x, m * annotation_x + c),
+                xytext=(0.65, 0.4),
+                textcoords="axes fraction",
+                fontsize=16,
+                ha="center",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="blue"),
+                arrowprops=dict(arrowstyle="-", color="blue"),
+            )
+
             plt.plot(x, y, color='green', linewidth=2.5, label='Simulation Data')
-            plt.plot(x, estimated_y, color='blue', linewidth=1.5, label='Linear Fit')
             plt.xlabel('Growth Success Rate')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
-            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n {error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -220,12 +239,25 @@ class SensitivityAnalysis:
         estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
+            annotation_x = x[int(len(x) / 1.5)]
+            plt.annotate(
+                f"y = {m:.2f}x {'+' if c >= 0 else '-'} {abs(c):.2f}",
+                xy=(annotation_x, m * annotation_x + c),
+                xytext=(0.65, 0.4),
+                textcoords="axes fraction",
+                fontsize=16,
+                ha="center",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="blue"),
+                arrowprops=dict(arrowstyle="-", color="blue"),
+            )
+
             plt.plot(range(229, 350), average_populations, color='blue', linewidth=2.5, label='Simulation Data')
             plt.plot(x, estimated_y, color='green', linewidth=1.5, label='Linear Fit')
             plt.xlabel('Day Egg Laying Rate Hits Zero (Zero Day)')
             plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
             plt.title('Average Population vs Zero Day')
-            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (NMSE):\n {error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.legend()
+            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
 
             # code for changing over to months
@@ -321,3 +353,10 @@ class SensitivityAnalysis:
             plt.show()
 
         return population_histories
+
+if __name__ == '__main__':
+    analysis = SensitivityAnalysis()
+    analysis.vary_egg_laying_rate(variation_range=0.1, graph=True, trials=101)
+    analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
+    analysis.vary_egg_laying_rate_cutoff(graph=True)
+    analysis.vary_male_female_proportion(lowest_male_proportion=0.01, highest_male_proportion=0.2, graph=True, trials=100)
