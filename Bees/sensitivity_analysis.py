@@ -1,4 +1,5 @@
 import calendar
+import math
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -100,7 +101,6 @@ class SensitivityAnalysis:
 
         error /= len(x)
         error /= sum(y) / len(y) # normalize by mean
-        estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
             annotation_x = x[int(len(x) / 1.5)]
@@ -173,7 +173,6 @@ class SensitivityAnalysis:
 
         error /= len(x)
         error /= sum(y) / len(y) # normalize by mean
-        estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
             annotation_x = x[int(len(x) / 1.5)]
@@ -354,9 +353,142 @@ class SensitivityAnalysis:
 
         return population_histories
 
+    def vary_growth_time(self, variation_range: float = 0.1, graph: bool = False) -> tuple[float, float, list[float], list[float]]:
+        """A function to see how peak population changes with the growth time of the bees
+
+        :param variation_range: The multiplier for the growth time (will be 1 +- variation_range), defaults to 0.1
+        :type variation_range: float, optional
+        :param graph: Whether or not to graph the results, defaults to False
+        :type graph: bool, optional
+        :return: A tuple containing the error from a linear fit (NMSE, normalized with mean) for female and male growth times, and lists of peak popualtions for female and male bees for each trial
+        :rtype: tuple[float, float, list[float], list[float]]
+        """
+        # this one is weird because the growth time has to be an integer (i'm pretty sure)
+        peak_populations_f = []
+        peak_populations_m = []
+
+        lower_int_f = math.floor(self.FEMALE_GROWTH_DURATION * (1 - variation_range)) 
+        upper_int_f = math.ceil(self.FEMALE_GROWTH_DURATION * (1 + variation_range))
+        lower_int_m = math.floor(self.MALE_GROWTH_DURATION * (1 - variation_range))
+        upper_int_m = math.ceil(self.MALE_GROWTH_DURATION * (1 + variation_range))
+        range_m = upper_int_m - lower_int_m
+        range_f = upper_int_f - lower_int_f
+
+        # we need to do it separately for male and female
+        for female_growth_duration in range(lower_int_f, upper_int_f + 1):
+            model = BeePopulationModel(
+                time_span=self.TIME_SPAN,
+                initial_population=self.INITIAL_POPULATION,
+                female_proportion=self.FEMALE_PROPORTION,
+                male_proportion=self.MALE_PROPORTION,
+                female_growth_duration=female_growth_duration,
+                male_growth_duration=self.MALE_GROWTH_DURATION,
+                growth_success_rate=self.GROWTH_SUCCESS_RATE,
+                egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
+                zero_day=self.ZERO_DAY
+            )
+            bf, bm, af, am, _ = model.main(graph=False)
+            total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
+            peak_populations_f.append(max(total_population))
+
+        for male_growth_duration in range(lower_int_m, upper_int_m + 1):
+            model = BeePopulationModel(
+                time_span=self.TIME_SPAN,
+                initial_population=self.INITIAL_POPULATION,
+                female_proportion=self.FEMALE_PROPORTION,
+                male_proportion=self.MALE_PROPORTION,
+                female_growth_duration=self.FEMALE_GROWTH_DURATION,
+                male_growth_duration=male_growth_duration,
+                growth_success_rate=self.GROWTH_SUCCESS_RATE,
+                egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
+                zero_day=self.ZERO_DAY
+            )
+            bf, bm, af, am, _ = model.main(graph=False)
+            total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
+            peak_populations_m.append(max(total_population))
+
+        # now we have to calculate two regressions and graph separately
+        x_f = np.array(range(lower_int_f, upper_int_f + 1))
+        y_f = np.array(peak_populations_f)
+        A_f = np.vstack([x_f, np.ones(len(x_f))]).T
+        m_f, c_f = np.linalg.lstsq(A_f, y_f, rcond=None)[0]
+        error_f = 0
+        for x_value, y_value in zip(x_f, y_f):
+            error_f += abs(y_value - (m_f * x_value + c_f))
+        error_f /= len(x_f)
+        error_f /= sum(y_f) / len(y_f) # normalize by mean
+
+        x_m = np.array(range(lower_int_m, upper_int_m + 1))
+        y_m = np.array(peak_populations_m)
+        A_m = np.vstack([x_m, np.ones(len(x_m))]).T
+        m_m, c_m = np.linalg.lstsq(A_m, y_m, rcond=None)[0]
+        error_m = 0
+        for x_value, y_value in zip(x_m, y_m):
+            error_m += abs(y_value - (m_m * x_value + c_m))
+        error_m /= len(x_m)
+        error_m /= sum(y_m) / len(y_m) # normalize by mean
+
+        if graph:
+            fig, axes = plt.subplots(2, 1)
+
+            for ax, x, y, m, c, peak_populations, error, color, population in [
+                (axes[0], x_f, y_f, m_f, c_f, peak_populations_f, error_f, 'red', 'Female'),
+                (axes[1], x_m, y_m, m_m, c_m, peak_populations_m, error_m, 'blue', 'Male'),
+            ]:
+                plt.sca(ax)
+
+                annotation_x = x[int(len(x) / 1.5)]
+                plt.annotate(
+                    f"y = {m:.2f}x {'+' if c >= 0 else '-'} {abs(c):.2f}",
+                    xy=(annotation_x, m * annotation_x + c),
+                    xytext=(0.65, 0.4),
+                    textcoords="axes fraction",
+                    fontsize=16,
+                    ha="center",
+                    bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="blue"),
+                    arrowprops=dict(arrowstyle="-", color="blue"),
+                )
+
+                plt.plot(
+                    x, peak_populations,
+                    color=color,
+                    linewidth=4,
+                    label=f'{population} Population Simulation Data',
+                )
+                plt.xlabel('Growth Duration (Days)')
+                plt.ylabel('Peak Population (Bees)')
+                plt.title(f'{population} Population: Peak Population vs Growth Duration')
+                plt.text(
+                    (x[1] + x[2]) / 2,
+                    (max(y) - min(y)) * 0.86 + min(y),
+                    f'Error from linear fit (NMSE):\n ≈{error:.2f}',
+                    fontsize=16,
+                    color='black',
+                    ha='center',
+                    va='center',
+                    bbox=dict(facecolor='white', alpha=0.75),
+                )
+                plt.grid()
+                plt.legend()
+
+            fig.tight_layout()
+
+            # match both margins to whichever needs more space
+            margin = max(fig.subplotpars.left, 1 - fig.subplotpars.right)
+            fig.subplots_adjust(left=margin, right=1 - margin)
+
+            plt.show()
+
+        return error_f, error_m, peak_populations_f, peak_populations_m
+
+    def vary_lifespan(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[float, float, list[float], list[float]]:
+
+        return 0.0, 0.0, [], []
+
 if __name__ == '__main__':
     analysis = SensitivityAnalysis()
-    analysis.vary_egg_laying_rate(variation_range=0.1, graph=True, trials=101)
-    analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
-    analysis.vary_egg_laying_rate_cutoff(graph=True)
-    analysis.vary_male_female_proportion(lowest_male_proportion=0.01, highest_male_proportion=0.2, graph=True, trials=100)
+    # analysis.vary_egg_laying_rate(variation_range=0.1, graph=True, trials=101)
+    # analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
+    # analysis.vary_egg_laying_rate_cutoff(graph=True)
+    # analysis.vary_male_female_proportion(lowest_male_proportion=0.01, highest_male_proportion=0.2, graph=True, trials=100)
+    analysis.vary_growth_time(variation_range=0.2, graph=True)
