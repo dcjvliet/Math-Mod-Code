@@ -20,7 +20,8 @@ class BeePopulationModel:
                 male_growth_duration: int = 24,
                 growth_success_rate: float = 0.85,
                 egg_laying_multiplier: float = 1,
-                zero_day: int = 300
+                zero_day: int = 300,
+                female_winter_lifespan: float = 150
             ):
         """Initialize a BeePopulationModel object
 
@@ -42,6 +43,8 @@ class BeePopulationModel:
         :type egg_laying_multiplier: float, optional
         :param zero_day: The day when the egg laying rate hits zero in the winter (used for sensitivity analysis), defaults to 300
         :type zero_day: int, optional
+        :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
+        :type female_winter_lifespan: float, optional
         """
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
@@ -52,6 +55,7 @@ class BeePopulationModel:
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.ZERO_DAY = zero_day
+        self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
 
     def display_graph(self, female_population: list[float], 
                     male_population: list[float], 
@@ -262,7 +266,7 @@ class BeePopulationModel:
         :return: The mean lifespan for a female bee at the specified time
         :rtype: float
         """
-        anchor_means = [150, 150, 150, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, 150, 150, 150]
+        anchor_means = [self.FEMALE_WINTER_LIFESPAN, self.FEMALE_WINTER_LIFESPAN, self.FEMALE_WINTER_LIFESPAN, 22.37, 19.29, 23.84, 22.84, 13.58, 26.25, self.FEMALE_WINTER_LIFESPAN, self.FEMALE_WINTER_LIFESPAN, self.FEMALE_WINTER_LIFESPAN]
         anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         return np.interp(t % 365, anchor_points, anchor_means, period=365)
 

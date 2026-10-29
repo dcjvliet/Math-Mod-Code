@@ -20,7 +20,8 @@ class SensitivityAnalysis:
                     male_growth_duration: int = 24,
                     growth_success_rate: float = 0.85,
                     egg_laying_multiplier: float = 1,
-                    zero_day: int = 300
+                    zero_day: int = 300,
+                    female_winter_lifespan: float = 150
                 ):
         """Initialize a SensitivityAnalysis object
 
@@ -42,6 +43,8 @@ class SensitivityAnalysis:
         :type egg_laying_multiplier: float, optional
         :param zero_day: The day when the egg laying rate hits zero in the winter (used for sensitivity analysis), defaults to 300
         :type zero_day: int, optional
+        :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
+        :type female_winter_lifespan: float, optional
         """
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
@@ -52,6 +55,7 @@ class SensitivityAnalysis:
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.ZERO_DAY = zero_day
+        self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
 
     def vary_egg_laying_rate(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[float, list[float]]:
         """A function to model how peak population changes with a changing egg laying rate
@@ -83,7 +87,8 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=multiplier,
-                zero_day=self.ZERO_DAY
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
             bf, bm, af, am, _ = model.main(graph=False)
             # initial is already accounted for in the female population
@@ -156,7 +161,8 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=new_success_rate,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -217,7 +223,8 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=zero_day
+                zero_day=zero_day,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -305,7 +312,8 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
 
             bf, bm, af, am, _ = model.main(graph=False)
@@ -385,7 +393,8 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -401,7 +410,8 @@ class SensitivityAnalysis:
                 male_growth_duration=male_growth_duration,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -481,9 +491,98 @@ class SensitivityAnalysis:
 
         return error_f, error_m, peak_populations_f, peak_populations_m
 
-    def vary_lifespan(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[float, float, list[float], list[float]]:
+    def vary_female_lifespan(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> list[list[float]]:
+        """A function to see how female population changes with female winter lifespan
 
-        return 0.0, 0.0, [], []
+        :param variation_range: The multiplier for female lifespan (will be 1 +- variation_range), defaults to 0.1
+        :type variation_range: float, optional
+        :param graph: Whether or not to graph the results, defaults to False
+        :type graph: bool, optional
+        :param trials: The number of trials to run (adds 1 if even), defaults to 101
+        :type trials: int, optional
+        :return: A list of population histories for each trial, where each population history is a list of female populations over time
+        :rtype: list[list[float]]
+        """
+        population_histories = []
+
+        if trials % 2 == 0:
+            trials += 1
+
+        for i in range(trials):
+            new_lifespan = (1 + (i - (trials // 2)) * (variation_range / (trials // 2))) * self.FEMALE_WINTER_LIFESPAN
+
+            model = BeePopulationModel(
+                time_span=self.TIME_SPAN,
+                initial_population=self.INITIAL_POPULATION,
+                female_proportion=self.FEMALE_PROPORTION,
+                male_proportion=self.MALE_PROPORTION,
+                female_growth_duration=self.FEMALE_GROWTH_DURATION,
+                male_growth_duration=self.MALE_GROWTH_DURATION,
+                growth_success_rate=self.GROWTH_SUCCESS_RATE,
+                egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
+                zero_day=self.ZERO_DAY,
+                female_winter_lifespan=new_lifespan
+            )
+
+            bf, _, af, _, _ = model.main(graph=False)
+            total_population_f = np.sum(np.asarray([bf, af], dtype=float), axis=0).tolist()
+            population_histories.append(total_population_f)
+
+        if graph:
+            fig, ax = plt.subplots(figsize=(11, 6), constrained_layout=True)
+
+            lifespans = np.linspace(
+                (1 - variation_range) * self.FEMALE_WINTER_LIFESPAN,
+                (1 + variation_range) * self.FEMALE_WINTER_LIFESPAN,
+                trials,
+            )
+
+            cmap = plt.get_cmap("coolwarm")
+            norm = Normalize(vmin=min(lifespans), vmax=max(lifespans))
+
+            for lifespan, population_history in zip(
+                lifespans, population_histories
+            ):
+                ax.plot(
+                    np.arange(len(population_history)),
+                    population_history,
+                    color=cmap(norm(lifespan)),
+                    linewidth=1,
+                )
+
+            colorbar = fig.colorbar(
+                ScalarMappable(norm=norm, cmap=cmap),
+                ax=ax,
+            )
+            colorbar.set_label("Female winter lifespan (days)")
+
+            ax.set_title("Female Population Over Time by Female Winter Lifespan")
+            ax.set_xlabel("Time (days)")
+            ax.set_ylabel("Female Population (Bees)")
+            ax.grid(True, alpha=0.25)
+
+            month_names = list(calendar.month_abbr)[1:]
+            month_starts = []
+            month_labels = []
+            month_start_days = [
+                0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+            ]
+
+            for day in range(self.TIME_SPAN + 1):
+                year_day = day % 365
+
+                if year_day in month_start_days:
+                    month_starts.append(day)
+                    month_labels.append(
+                        month_names[month_start_days.index(year_day)]
+                    )
+
+            ax.set_xticks(month_starts)
+            ax.set_xticklabels(month_labels, rotation=45)
+
+            plt.show()
+
+        return population_histories
 
 if __name__ == '__main__':
     analysis = SensitivityAnalysis()
@@ -491,4 +590,6 @@ if __name__ == '__main__':
     # analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
     # analysis.vary_egg_laying_rate_cutoff(graph=True)
     # analysis.vary_male_female_proportion(lowest_male_proportion=0.01, highest_male_proportion=0.2, graph=True, trials=100)
-    analysis.vary_growth_time(variation_range=0.2, graph=True)
+    # analysis.vary_growth_time(variation_range=0.2, graph=True)
+    analysis.vary_female_lifespan(variation_range=0.1, graph=True, trials=101)
+    
