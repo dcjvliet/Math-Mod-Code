@@ -4,9 +4,6 @@ from typing import Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
-from matplotlib.ticker import PercentFormatter
 
 
 class BeePopulationModel:
@@ -444,3 +441,113 @@ class BeePopulationModel:
             )
 
         return baby_female_population_history, baby_male_population_history, adult_female_population_history, adult_male_population_history, initial_population_history
+
+    def graph_life_expectancy_info(self) -> None:
+        days = range(365)
+        means = [self.get_female_means(day) for day in days]
+        stds = [self.get_female_stds(day) for day in days]
+
+        fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+
+        axes[0].plot(days, means, label="Female mean life expectancy", color="blue", linewidth=2.5)
+        axes[0].set_title("Mean Female Life Expectancy over Time")
+        axes[0].set_ylabel("Mean life expectancy")
+        axes[0].legend()
+        axes[0].grid(True, alpha=0.3)
+
+        axes[1].plot(days, stds, label="Female life expectancy SD", color="orange", linewidth=2.5)
+        axes[1].set_title("Standard Deviation of Female Life Expectancy over Time")
+        axes[1].set_xlabel("Day")
+        axes[1].set_ylabel("Standard deviation")
+        axes[1].legend()
+        axes[1].grid(True, alpha=0.3)
+
+        month_names = list(calendar.month_abbr)[1:]
+        month_starts = []
+        month_labels = []
+        month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+        for day in range(366):
+            year_day = day % 365
+
+            if year_day in month_start_days:
+                month_starts.append(day)
+                month_labels.append(month_names[month_start_days.index(year_day)])
+
+        plt.xticks(month_starts, month_labels, rotation=45)
+
+        fig.tight_layout()
+        plt.show()
+
+    def graph_egg_laying_rate(self) -> None:
+        days = range(365)
+        egg_laying_rates = [self.get_egg_laying_rate(day, self.ZERO_DAY) for day in days]
+
+        plt.plot(days, egg_laying_rates, label="Egg Laying Rate", color="green", linewidth=2.5)
+        plt.title("Egg Laying Rate over Time")
+        plt.xlabel("Day")
+        plt.ylabel("Egg Laying Rate")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        
+        month_names = list(calendar.month_abbr)[1:]
+        month_starts = []
+        month_labels = []
+        month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+        for day in range(366):
+            year_day = day % 365
+
+            if year_day in month_start_days:
+                month_starts.append(day)
+                month_labels.append(month_names[month_start_days.index(year_day)])
+
+        plt.xticks(month_starts, month_labels, rotation=45)
+        plt.show()
+
+    def graph_weibull_curve(self, day: int):
+        mean = self.get_female_means(day)
+        std = self.get_female_stds(day)
+        ages = np.linspace(0, 50, 100)
+        weibull_values = [self.find_weibull_survival_probability(age, mean, std) for age in ages]
+
+        plt.plot(ages, weibull_values, label=f"Weibull Survival Curve (Day {day})", color="purple", linewidth=2.5)
+        plt.title(f"Weibull Survival Curve for Female Bees on Day {day}")
+        plt.xlabel("Age (Days)")
+        plt.ylabel("Survival Probability")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()
+
+    def graph_male_proportion(self):
+        bf, bm, af, am, _ = self.main(graph=False)
+        total_population = [babyf + babym + adultf + adultm for babyf, babym, adultf, adultm in zip(bf, bm, af, am)]
+        male_proportion = [babym + adultm for babym, adultm in zip(bm, am)]
+        male_proportion = [male / total if total > 0 else 0 for male, total in zip(male_proportion, total_population)]
+
+        plt.plot(range(self.TIME_SPAN), male_proportion, label="Male Proportion", color="orange", linewidth=2.5)
+        plt.title("Proportion of Male Bees Over Time")
+        plt.xlabel("Time (days)")
+        plt.ylabel("Proportion of Male Bees")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+
+        month_names = list(calendar.month_abbr)[1:]
+        month_starts = []
+        month_labels = []
+        month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+        for day in range(731):
+            year_day = day % 365
+
+            if year_day in month_start_days:
+                month_starts.append(day)
+                month_labels.append(month_names[month_start_days.index(year_day)])
+
+        plt.xticks(month_starts, month_labels, rotation=45)
+        plt.show()
+
+
+if __name__ == "__main__":
+    model = BeePopulationModel()
+    model.graph_male_proportion()
