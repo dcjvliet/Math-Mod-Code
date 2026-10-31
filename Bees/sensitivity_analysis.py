@@ -589,12 +589,4 @@ class SensitivityAnalysis:
             plt.show()
 
         return population_histories
-
-if __name__ == '__main__':
-    analysis = SensitivityAnalysis()
-    # analysis.vary_egg_laying_rate(variation_range=0.1, graph=True, trials=101)
-    # analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
-    analysis.vary_egg_laying_rate_cutoff(graph=True)
-    # analysis.vary_male_female_proportion(lowest_male_proportion=0.001, highest_male_proportion=0.1025, graph=True, trials=100)
-    # analysis.vary_female_lifespan(variation_range=0.2, graph=True, trials=101)
     

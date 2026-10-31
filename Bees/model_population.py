@@ -563,8 +563,3 @@ class BeePopulationModel:
 
         plt.xticks(month_starts, month_labels, rotation=45)
         plt.show()
-
-
-if __name__ == "__main__":
-    model = BeePopulationModel(time_span=730)
-    model.graph_weibull_curve(day=300)
