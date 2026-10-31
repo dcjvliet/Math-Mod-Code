@@ -57,6 +57,14 @@ class SensitivityAnalysis:
         self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
 
+        plt.rcParams.update({
+            'axes.titlesize': 20,     # Title size
+            'axes.labelsize': 20,     # X and Y label size
+            'xtick.labelsize': 16,    # X tick label size
+            'ytick.labelsize': 16,    # Y tick label size
+            'legend.fontsize': 14     # Legend font size
+        })
+
     def vary_egg_laying_rate(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[float, list[float]]:
         """A function to model how peak population changes with a changing egg laying rate
 
@@ -124,7 +132,7 @@ class SensitivityAnalysis:
             plt.xlabel('Egg Laying Rate Multiplier')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Egg Laying Rate Multiplier')
-            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -197,7 +205,7 @@ class SensitivityAnalysis:
             plt.xlabel('Growth Success Rate')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
-            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.95 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -213,7 +221,7 @@ class SensitivityAnalysis:
         :rtype: tuple[float, list[float]]
         """
         average_populations = []
-        for zero_day in range(229, 350): # we start decreasing at 229, and increase starting at 350, so we look at range in between
+        for zero_day in range(229, 345): # we start decreasing at 229, and increase starting at 350, so we look at range in between
             model = BeePopulationModel(
                 time_span=self.TIME_SPAN,
                 initial_population=self.INITIAL_POPULATION,
@@ -232,7 +240,7 @@ class SensitivityAnalysis:
             average_populations.append(sum(total_population) / len(total_population)) # average population after egg laying rate starts declining
 
         # calculate its difference from a line
-        x = np.array(range(229, 350))
+        x = np.array(range(229, 345))
         y = np.array(average_populations)
         A = np.vstack([x, np.ones(len(x))]).T
         m, c = np.linalg.lstsq(A, y, rcond=None)[0]
@@ -257,13 +265,13 @@ class SensitivityAnalysis:
                 arrowprops=dict(arrowstyle="-", color="blue"),
             )
 
-            plt.plot(range(229, 350), average_populations, color='blue', linewidth=2.5, label='Simulation Data')
+            plt.plot(range(229, 345), average_populations, color='blue', linewidth=2.5, label='Simulation Data')
             plt.plot(x, estimated_y, color='green', linewidth=1.5, label='Linear Fit')
             plt.xlabel('Day Egg Laying Rate Hits Zero (Zero Day)')
             plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
             plt.title('Average Population vs Zero Day')
             plt.legend()
-            plt.text(245, (max(y) - min(y)) * 0.97 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(245, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
 
             # code for changing over to months
@@ -272,7 +280,7 @@ class SensitivityAnalysis:
             month_labels = []
             month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
 
-            for day in range(229, 350):
+            for day in range(229, 345):
                 year_day = day % 365
 
                 if year_day in month_start_days:
@@ -379,8 +387,6 @@ class SensitivityAnalysis:
         upper_int_f = math.ceil(self.FEMALE_GROWTH_DURATION * (1 + variation_range))
         lower_int_m = math.floor(self.MALE_GROWTH_DURATION * (1 - variation_range))
         upper_int_m = math.ceil(self.MALE_GROWTH_DURATION * (1 + variation_range))
-        range_m = upper_int_m - lower_int_m
-        range_f = upper_int_f - lower_int_f
 
         # we need to do it separately for male and female
         for female_growth_duration in range(lower_int_f, upper_int_f + 1):
@@ -470,7 +476,7 @@ class SensitivityAnalysis:
                 plt.title(f'{population} Population: Peak Population vs Growth Duration')
                 plt.text(
                     (x[1] + x[2]) / 2,
-                    (max(y) - min(y)) * 0.86 + min(y),
+                    (max(y) - min(y)) * 0.84 + min(y),
                     f'Error from linear fit (NMSE):\n ≈{error:.2f}',
                     fontsize=16,
                     color='black',
@@ -588,8 +594,7 @@ if __name__ == '__main__':
     analysis = SensitivityAnalysis()
     # analysis.vary_egg_laying_rate(variation_range=0.1, graph=True, trials=101)
     # analysis.vary_growth_success_rate(variation_range=0.1, graph=True, trials=101)
-    # analysis.vary_egg_laying_rate_cutoff(graph=True)
-    # analysis.vary_male_female_proportion(lowest_male_proportion=0.01, highest_male_proportion=0.2, graph=True, trials=100)
-    # analysis.vary_growth_time(variation_range=0.2, graph=True)
-    analysis.vary_female_lifespan(variation_range=0.1, graph=True, trials=101)
+    analysis.vary_egg_laying_rate_cutoff(graph=True)
+    # analysis.vary_male_female_proportion(lowest_male_proportion=0.001, highest_male_proportion=0.1025, graph=True, trials=100)
+    # analysis.vary_female_lifespan(variation_range=0.2, graph=True, trials=101)
     

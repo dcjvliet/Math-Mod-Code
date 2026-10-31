@@ -54,6 +54,15 @@ class BeePopulationModel:
         self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
 
+        # set up label sizes to be bigger
+        plt.rcParams.update({
+            'axes.titlesize': 20,     # Title size
+            'axes.labelsize': 20,     # X and Y label size
+            'xtick.labelsize': 14,    # X tick label size
+            'ytick.labelsize': 16,    # Y tick label size
+            'legend.fontsize': 14     # Legend font size
+        })
+
     def display_graph(self, female_population: list[float], 
                     male_population: list[float], 
                     timespan: int, plot_total: bool = True, 
@@ -251,7 +260,7 @@ class BeePopulationModel:
         :return: The egg laying rate (per day)
         :rtype: float
         """
-        anchor_days = [0, 15, 74, 105, 166, 197, 228, zero_point, 350]
+        anchor_days = [0, 15, 74, 105, 166, 197, 228, zero_point, 345]
         anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
         return np.interp(t % 365, anchor_days, anchor_rates, period=365) * self.EGG_LAYING_MULTIPLIER
 
@@ -508,7 +517,7 @@ class BeePopulationModel:
     def graph_weibull_curve(self, day: int):
         mean = self.get_female_means(day)
         std = self.get_female_stds(day)
-        ages = np.linspace(0, 50, 100)
+        ages = np.linspace(0, 250, 1000)
         weibull_values = [self.find_weibull_survival_probability(age, mean, std) for age in ages]
 
         plt.plot(ages, weibull_values, label=f"Weibull Survival Curve (Day {day})", color="purple", linewidth=2.5)
@@ -549,5 +558,5 @@ class BeePopulationModel:
 
 
 if __name__ == "__main__":
-    model = BeePopulationModel()
-    model.graph_male_proportion()
+    model = BeePopulationModel(time_span=730)
+    model.graph_weibull_curve(day=300)
