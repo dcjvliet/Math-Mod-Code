@@ -18,7 +18,8 @@ class BeePopulationModel:
                 growth_success_rate: float = 0.85,
                 egg_laying_multiplier: float = 1,
                 zero_day: int = 300,
-                female_winter_lifespan: float = 150
+                female_winter_lifespan: float = 150,
+                start_date: int = 1,
             ):
         """Initialize a BeePopulationModel object
 
@@ -42,6 +43,8 @@ class BeePopulationModel:
         :type zero_day: int, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
+        :param start_date: The starting day of the simulation, defaults to 1
+        :type start_date: int, optional
         """
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
@@ -53,6 +56,7 @@ class BeePopulationModel:
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
+        self.START_DATE = start_date
 
         # set up label sizes to be bigger
         plt.rcParams.update({
@@ -131,11 +135,12 @@ class BeePopulationModel:
                 ]
 
                 for day in range(timespan + 1):
-                    if day % 365 in month_start_days:
+                    year_day = (day + self.START_DATE - 1) % 365
+                    if year_day in month_start_days:
                         month_starts.append(day)
                         month_labels.append(
                             calendar.month_abbr[
-                                month_start_days.index(day % 365) + 1
+                                month_start_days.index(year_day) + 1
                             ]
                         )
 
@@ -235,7 +240,7 @@ class BeePopulationModel:
             month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
 
             for day in range(timespan + 1):
-                year_day = day % 365
+                year_day = (day + self.START_DATE - 1) % 365
 
                 if year_day in month_start_days:
                     month_starts.append(day)
@@ -372,8 +377,9 @@ class BeePopulationModel:
 
             if new_adults > 0:
                 if gender == 'female':
-                    mean = self.get_female_means(day)
-                    std = self.get_female_stds(day)
+                    calendar_day = day + self.START_DATE - 1
+                    mean = self.get_female_means(calendar_day)
+                    std = self.get_female_stds(calendar_day)
                 else:
                     mean, std = 26.5, 5.5
 
@@ -400,9 +406,11 @@ class BeePopulationModel:
         :rtype: list[float]
         """
         populations_history = []
+        mean = self.get_female_means(self.START_DATE - 1)
+        std = self.get_female_stds(self.START_DATE - 1)
         for current_day in range(t):
             # find probability for each day, no new initial bees are ever born
-            population = starting_population * self.find_weibull_survival_probability(current_day, 150, 30)
+            population = starting_population * self.find_weibull_survival_probability(current_day, mean, std)
             populations_history.append(population)
         return populations_history
 
@@ -416,7 +424,7 @@ class BeePopulationModel:
         """
         # get the egg laying rate for the time period
         egg_history = np.array([
-            self.get_egg_laying_rate(day, self.ZERO_DAY) for day in range(self.TIME_SPAN)
+            self.get_egg_laying_rate(day + self.START_DATE - 1, self.ZERO_DAY) for day in range(self.TIME_SPAN)
         ])
 
         # find female population and scale by FEMALE_PROPORTION to account for male:female ratio
@@ -547,7 +555,7 @@ class BeePopulationModel:
         month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
 
         for day in range(731):
-            year_day = day % 365
+            year_day = (day + self.START_DATE - 1) % 365
 
             if year_day in month_start_days:
                 month_starts.append(day)
