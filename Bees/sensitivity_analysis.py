@@ -13,7 +13,7 @@ from model_population import BeePopulationModel
 class SensitivityAnalysis:
     def __init__(self,
                     time_span: int = 730,
-                    initial_population: int = 6000,
+                    initial_population: int = 15000,
                     female_proportion: float = 0.925,
                     male_proportion: float = 0.075,
                     female_growth_duration: int = 21,
@@ -21,13 +21,14 @@ class SensitivityAnalysis:
                     growth_success_rate: float = 0.85,
                     egg_laying_multiplier: float = 1,
                     zero_day: int = 300,
-                    female_winter_lifespan: float = 150
+                    female_winter_lifespan: float = 150,
+                    start_date: int = 1,
                 ):
         """Initialize a SensitivityAnalysis object
 
         :param time_span: The number of days to model the population for (starting on Jan 1), defaults to 730
         :type time_span: int, optional
-        :param initial_population: The initial population of the bee colony, defaults to 6000
+        :param initial_population: The initial population of the bee colony, defaults to 15000
         :type initial_population: int, optional
         :param female_proportion: The proportion of females that will be born, defaults to 0.925
         :type female_proportion: float, optional
@@ -45,6 +46,8 @@ class SensitivityAnalysis:
         :type zero_day: int, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
+        :param start_date: The starting day of the simulation, defaults to 1
+        :type start_date: int, optional
         """
         self.TIME_SPAN = time_span # days
         self.INITIAL_POPULATION = initial_population
@@ -56,6 +59,7 @@ class SensitivityAnalysis:
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
+        self.START_DATE = start_date
 
         plt.rcParams.update({
             'axes.titlesize': 20,     # Title size
@@ -96,7 +100,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=multiplier,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
             # initial is already accounted for in the female population
@@ -170,7 +175,8 @@ class SensitivityAnalysis:
                 growth_success_rate=new_success_rate,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -232,7 +238,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=zero_day,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -321,7 +328,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
 
             bf, bm, af, am, _ = model.main(graph=False)
@@ -400,7 +408,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -417,7 +426,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
@@ -527,7 +537,8 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 zero_day=self.ZERO_DAY,
-                female_winter_lifespan=new_lifespan
+                female_winter_lifespan=new_lifespan,
+                start_date=self.START_DATE
             )
 
             bf, _, af, _, _ = model.main(graph=False)

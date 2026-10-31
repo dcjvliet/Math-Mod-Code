@@ -10,7 +10,7 @@ class BeePopulationModel:
     def __init__(
                 self,
                 time_span: int = 730,
-                initial_population: int = 6000,
+                initial_population: int = 15000,
                 female_proportion: float = 0.925,
                 male_proportion: float = 0.075,
                 female_growth_duration: int = 21,
@@ -23,9 +23,9 @@ class BeePopulationModel:
             ):
         """Initialize a BeePopulationModel object
 
-        :param time_span: The number of days to model the population for (starting on Jan 1), defaults to 730
+        :param time_span: The number of days to model the population for, defaults to 730
         :type time_span: int, optional
-        :param initial_population: The initial population of the bee colony, defaults to 6000
+        :param initial_population: The initial population of the bee colony, defaults to 15000
         :type initial_population: int, optional
         :param female_proportion: The proportion of females that will be born, defaults to 0.925
         :type female_proportion: float, optional
@@ -293,43 +293,6 @@ class BeePopulationModel:
         anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         return np.interp(t % 365, anchor_points, anchor_stds, period=365)
 
-    def day_to_month(self, t: float) -> int:
-        """Convert a day to a month (1-12)
-
-        :param t: The time since january 1st in days
-        :type t: float
-        :raises ValueError: If the day is not valid (should never happen)
-        :return: The month (1-12)
-        :rtype: int
-        """
-        t_new = t % 365
-        if 0 <= t_new < 31:
-            return 1
-        elif 31 <= t_new < 59:
-            return 2
-        elif 59 <= t_new < 90:
-            return 3
-        elif 90 <= t_new < 120:
-            return 4
-        elif 120 <= t_new < 151:
-            return 5
-        elif 151 <= t_new < 181:
-            return 6
-        elif 181 <= t_new < 212:
-            return 7
-        elif 212 <= t_new < 243:
-            return 8
-        elif 243 <= t_new < 273:
-            return 9
-        elif 273 <= t_new < 304:
-            return 10
-        elif 304 <= t_new < 334:
-            return 11
-        elif 334 <= t_new < 365:
-            return 12
-
-        raise ValueError(f"Invalid day of year: {t_new}")
-
     def find_weibull_survival_probability(self, age: float, mean: float, std: float) -> float:
         """A function to find the probability of survival at a given time using the Weibull survival function
 
@@ -395,25 +358,75 @@ class BeePopulationModel:
 
         return baby_population_history.tolist(), adult_population_history.tolist()
 
-    def initial_population(self, t: int, starting_population: float) -> list[float]:
-        """Find the population of the initial bees at a given time
+    def get_female_age_distribution(self, snapshot_day: int) -> dict[int, float]:
+        """Function to get a snapshot of the adult female age distribution
 
-        :param t: The number of days since January 1st (in days)
+        :param snapshot_day: The day for which to get the snapshot
+        :type snapshot_day: int
+        :return: A dictionary containing the number of adult females for each age
+        :rtype: dict[int, float]
+        """
+        age_dsitribution = {age: 0.0 for age in range(snapshot_day + 1)}
+        for day in range(self.FEMALE_GROWTH_DURATION, snapshot_day + 1):
+            egg_day = day - self.FEMALE_GROWTH_DURATION
+            eggs = self.get_egg_laying_rate(egg_day + self.START_DATE - 1, self.ZERO_DAY)
+            new_females = eggs * self.FEMALE_PROPORTION * self.GROWTH_SUCCESS_RATE
+
+            calendar_day = day + self.START_DATE - 1
+            mean = self.get_female_means(calendar_day)
+            std = self.get_female_stds(calendar_day)
+
+            age = snapshot_day - day # work backwards
+            surviving_females = new_females * self.find_weibull_survival_probability(age, mean, std)
+            age_dsitribution[age] += surviving_females
+
+        return age_dsitribution
+
+    def initial_population(self, t: int, starting_population: float) -> list[float]:
+        """A function to model the initial population over time
+
+        :param t: The number of days to model the initial population over
         :type t: int
-        :param starting_population: The initial population of bees
+        :param starting_population: The initial population size
         :type starting_population: float
-        :return: A list of population values for each day
+        :raises ValueError: If the starting population is zero or the age distribution is empty
+        :return: A list of population sizes for each day
         :rtype: list[float]
         """
-        populations_history = []
-        mean = self.get_female_means(self.START_DATE - 1)
-        std = self.get_female_stds(self.START_DATE - 1)
-        for current_day in range(t):
-            # find probability for each day, no new initial bees are ever born
-            population = starting_population * self.find_weibull_survival_probability(current_day, mean, std)
-            populations_history.append(population)
-        return populations_history
+        # we begin by finding the age distribution at the start date when the initial population is introduced
+        age_distribution = self.get_female_age_distribution(730) # offset by two years to remove any initial deviation
 
+        # now we need to scale
+        total = sum(age_distribution.values())
+        if total == 0:
+            raise ValueError("Starting population is zero or age distribution is empty")
+
+        scale_factor = starting_population / total
+        scaled_age_distribution = {age: count * scale_factor for age, count in age_distribution.items()}
+
+        age_groups = []
+        for age, count in scaled_age_distribution.items():
+            emergence_day = self.START_DATE - 1 - age
+            mean = self.get_female_means(emergence_day)
+            std = self.get_female_stds(emergence_day)
+
+            survival_prob_start = self.find_weibull_survival_probability(age, mean, std)
+            age_groups.append((age, count, mean, std, survival_prob_start))
+
+        population_history = []
+        for day in range(t):
+            population = 0
+            for age, count, mean, std, survival_prob_start in age_groups:
+                if survival_prob_start == 0:
+                    continue
+                survival_prob_now = self.find_weibull_survival_probability(age + day, mean, std)
+                # we divide so we don't double count the survival probability from the start
+                population += count * survival_prob_now / survival_prob_start 
+
+            population_history.append(population)
+
+        return population_history
+        
     def main(self, graph: bool = True) -> tuple[list[float], list[float], list[float], list[float], list[float]]:
         """Run the simulation and optionally graph the results
 
@@ -562,4 +575,15 @@ class BeePopulationModel:
                 month_labels.append(month_names[month_start_days.index(year_day)])
 
         plt.xticks(month_starts, month_labels, rotation=45)
+        plt.show()
+
+    def graph_initial_population(self):
+        initial_population = self.initial_population(self.TIME_SPAN, self.INITIAL_POPULATION)
+
+        plt.plot(range(self.TIME_SPAN), initial_population, label="Initial Population", color="blue", linewidth=2.5)
+        plt.title("Initial Population Over Time")
+        plt.xlabel("Time (days)")
+        plt.ylabel("Population (Bees)")
+        plt.legend()
+        plt.grid(True, alpha=0.3)
         plt.show()
