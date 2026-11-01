@@ -265,8 +265,8 @@ class BeePopulationModel:
         :return: The egg laying rate (per day)
         :rtype: float
         """
-        anchor_days = [0, 15, 74, 105, 166, 197, 228, zero_point, 345]
-        anchor_rates = [41.67, 83.3, 0, 400, 1800, 1600, 1300, 0, 0]
+        anchor_days = [10, 70, 101, 131, 162, 192, 223, 234, 246, 258, 270, 282, 294, 306, 318]
+        anchor_rates = [92.59, 0, 231.48, 1099.54, 1446.76, 1736.11, 1446.76, 791.86, 773.92, 422.94, 94.14, 16.98, 2.22, 0, 141.11]
         return np.interp(t % 365, anchor_days, anchor_rates, period=365) * self.EGG_LAYING_MULTIPLIER
 
     def get_female_means(self, t: float) -> float:
