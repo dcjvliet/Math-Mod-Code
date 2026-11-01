@@ -587,3 +587,35 @@ class BeePopulationModel:
         plt.legend()
         plt.grid(True, alpha=0.3)
         plt.show()
+
+    def graph_stable_population(self, population_history: list[float]):
+        # divide data into year chunks
+        year_chunks = []
+        for i in range(0, len(population_history), 365):
+            year_chunks.append(population_history[i:i+365])
+
+        colors = ['blue', 'red', 'green', 'purple', 'black', 'orange']
+
+        for year, chunk in enumerate(year_chunks):
+            plt.plot(range(len(chunk)), chunk, label=f'Year {year + 1}', color=colors[year % len(colors)], linewidth=2.5)
+
+        month_names = list(calendar.month_abbr)[1:]
+        month_starts = []
+        month_labels = []
+        month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+        for day in range(366):
+            year_day = (day + self.START_DATE - 1) % 365
+
+            if year_day in month_start_days:
+                month_starts.append(day)
+                month_labels.append(month_names[month_start_days.index(year_day)])
+
+        plt.xticks(month_starts, month_labels, rotation=45)
+
+        plt.title('Population Over Time (Overlaid)')
+        plt.xlabel('Time (days)')
+        plt.ylabel('Population (Bees)')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.show()

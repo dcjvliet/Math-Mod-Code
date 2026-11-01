@@ -118,7 +118,8 @@ class SensitivityAnalysis:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
-        error /= sum(y) / len(y) # normalize by mean
+        mean = sum(y) / len(y)
+        error /= mean ** 2 # normalize by mean squared
 
         if graph:
             annotation_x = x[int(len(x) / 1.5)]
@@ -137,7 +138,7 @@ class SensitivityAnalysis:
             plt.xlabel('Egg Laying Rate Multiplier')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Egg Laying Rate Multiplier')
-            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(1 - variation_range * 0.75, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (log(NMSE)):\n ≈{np.log(error):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -192,7 +193,8 @@ class SensitivityAnalysis:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
-        error /= sum(y) / len(y) # normalize by mean
+        mean = sum(y) / len(y)
+        error /= mean ** 2 # normalize by mean squared
 
         if graph:
             annotation_x = x[int(len(x) / 1.5)]
@@ -211,7 +213,7 @@ class SensitivityAnalysis:
             plt.xlabel('Growth Success Rate')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
-            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (log(NMSE)):\n ≈{np.log(error):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
@@ -256,7 +258,8 @@ class SensitivityAnalysis:
             error += abs(y_value - (m * x_value + c))
 
         error /= len(x)
-        error /= sum(y) / len(y) # normalize by mean
+        mean = sum(y) / len(y)
+        error /= mean ** 2 # normalize by mean squared
         estimated_y = np.array([m * x_value + c for x_value in x])
 
         if graph:
@@ -278,7 +281,7 @@ class SensitivityAnalysis:
             plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
             plt.title('Average Population vs Zero Day')
             plt.legend()
-            plt.text(245, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (NMSE):\n ≈{error:.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(245, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (log(NMSE)):\n ≈{np.log(error):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
 
             # code for changing over to months
@@ -442,7 +445,8 @@ class SensitivityAnalysis:
         for x_value, y_value in zip(x_f, y_f):
             error_f += abs(y_value - (m_f * x_value + c_f))
         error_f /= len(x_f)
-        error_f /= sum(y_f) / len(y_f) # normalize by mean
+        mean_f = sum(y_f) / len(y_f)
+        error_f /= mean_f ** 2 # normalize by mean squared
 
         x_m = np.array(range(lower_int_m, upper_int_m + 1))
         y_m = np.array(peak_populations_m)
@@ -452,7 +456,8 @@ class SensitivityAnalysis:
         for x_value, y_value in zip(x_m, y_m):
             error_m += abs(y_value - (m_m * x_value + c_m))
         error_m /= len(x_m)
-        error_m /= sum(y_m) / len(y_m) # normalize by mean
+        mean_m = sum(y_m) / len(y_m)
+        error_m /= mean_m ** 2 # normalize by mean squared
 
         if graph:
             fig, axes = plt.subplots(2, 1)
@@ -487,7 +492,7 @@ class SensitivityAnalysis:
                 plt.text(
                     (x[1] + x[2]) / 2,
                     (max(y) - min(y)) * 0.84 + min(y),
-                    f'Error from linear fit (NMSE):\n ≈{error:.2f}',
+                    f'Error from linear fit (log(NMSE)):\n ≈{np.log(error):.2f}',
                     fontsize=16,
                     color='black',
                     ha='center',
