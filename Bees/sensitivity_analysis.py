@@ -13,7 +13,7 @@ from model_population import BeePopulationModel
 class SensitivityAnalysis:
     def __init__(self,
                     time_span: int = 730,
-                    initial_population: int = 15000,
+                    initial_population: int = 5068,
                     female_proportion: float = 0.925,
                     male_proportion: float = 0.075,
                     female_growth_duration: int = 21,

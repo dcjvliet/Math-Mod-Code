@@ -10,7 +10,7 @@ class BeePopulationModel:
     def __init__(
                 self,
                 time_span: int = 730,
-                initial_population: int = 15000,
+                initial_population: int = 5068,
                 female_proportion: float = 0.925,
                 male_proportion: float = 0.075,
                 female_growth_duration: int = 21,
@@ -669,64 +669,34 @@ class BeePopulationModel:
         plt.show()
 
     def graph_age_distribution(self, females: dict[int, float], males: dict[int, float]) -> None:
-        ranges = [(0, 40), (110, 230)] # ranges for summer/winter bees
+        fig, ax = plt.subplots(figsize=(10, 6))
 
-        fig, axes = plt.subplots(1, 2, figsize=(12, 6), sharey=True)
-
-        total_pop = sum(females.values()) + sum(males.values())
         max_val = max([
             females.get(age, 0) + males.get(age, 0)
-            for start, end in ranges
-            for age in range(start, end + 1)
+            for age in range(0, 201)
         ] + [0])
 
-        for ax, (start, end) in zip(axes, ranges):
-            ages = list(range(start, end + 1))
-            female_pop = [females.get(age, 0) for age in ages]
-            male_pop = [males.get(age, 0) for age in ages]
+        ages = list(range(0, 201))
+        female_pop = [females.get(age, 0) for age in ages]
+        male_pop = [males.get(age, 0) for age in ages]
 
-            ax.bar(ages, female_pop, width=1, color='red', label='Females')
-            ax.bar(ages, male_pop, bottom=female_pop, width=1, color='blue', label='Males')
+        ax.bar(ages, female_pop, width=1, color='red', label='Females')
+        ax.bar(ages, male_pop, bottom=female_pop, width=1, color='blue', label='Males')
 
-            range_pop = sum(female_pop) + sum(male_pop)
-            percentage = range_pop / total_pop * 100 if total_pop else 0
+        range_pop = sum(female_pop) + sum(male_pop)
 
-            ax.text(
-                0.5, 0.95, f'{range_pop:,.0f} bees ({percentage:.1f}% of total)',
-                transform=ax.transAxes, ha='center', va='top'
-            )
+        ax.text(
+            0.9, 0.95, f'{range_pop:,.0f} bees',
+            transform=ax.transAxes, ha='center', va='top', fontsize=16
+        )
 
-            ax.set_xlim(start - 0.5, end + 0.5)
-            ax.set_ylim(0, max_val * 1.1 if max_val > 0 else 1)
-            ax.set_title(f'Initial Population Age Distribution ({start}-{end} days)')
-            ax.set_xlabel('Age (days)')
-            ax.set_ylabel('Population (Bees)')
-            ax.grid(axis='y', alpha=0.3)
-            ax.set_axisbelow(True)
-
-            if start == 110:
-                # zoomed in version of the graph so it's easier to see the shape
-                inset = ax.inset_axes([0.35, 0.35, 0.6, 0.48])
-
-                inset.bar(ages, female_pop, width=1, color='red')
-                inset.bar(ages, male_pop, bottom=female_pop, width=1, color='blue')
-
-                inset_max = max([
-                    female + male for female, male in zip(female_pop, male_pop)
-                ] + [0])
-
-                inset.set_xlim(start - 0.5, end + 0.5)
-                inset.set_ylim(0, inset_max * 1.1 if inset_max > 0 else 1)
-                inset.set_title('Initial Winter Bees (zoomed in)', fontsize=10)
-                inset.set_xlabel('Age (days)', fontsize=9)
-                inset.set_ylabel('Population (Bees)', fontsize=9)
-                inset.tick_params(labelsize=8)
-                inset.grid(axis='y', alpha=0.3)
-                inset.set_axisbelow(True)
-
-        fig.suptitle('Initial Population Age Distribution')
-        handles, labels = axes[0].get_legend_handles_labels()
-        fig.legend(handles, labels, loc="upper right", title="Gender")
+        ax.set_xlim(0, 200)
+        ax.set_ylim(0, max_val * 1.1 if max_val > 0 else 1)
+        ax.set_title(f'Initial Population Age Distribution (0-200 days)')
+        ax.set_xlabel('Age (days)')
+        ax.set_ylabel('Population (Bees)')
+        ax.grid(axis='y', alpha=0.3)
+        ax.set_axisbelow(True)
 
         fig.tight_layout(rect=(0, 0, 0.9, 0.94))
         plt.show()
