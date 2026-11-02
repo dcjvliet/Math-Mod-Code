@@ -378,7 +378,30 @@ class BeePopulationModel:
 
         return age_dsitribution
 
-    def initial_population(self, t: int, starting_population: float) -> list[float]:
+    def get_male_age_distribution(self, snapshot_day: int) -> dict[int, float]:
+        """Function to get a snapshot of the adult male age distribution
+
+        :param snapshot_day: The day for which to get the snapshot
+        :type snapshot_day: int
+        :return: A dictionary containing the number of adult males for each age
+        :rtype: dict[int, float]
+        """
+        age_distribution = {age: 0.0 for age in range(snapshot_day + 1)}
+        for day in range(self.MALE_GROWTH_DURATION, snapshot_day + 1):
+            egg_day = day - self.MALE_GROWTH_DURATION
+            eggs = self.get_egg_laying_rate(egg_day + self.START_DATE - 1)
+            new_males = eggs * self.MALE_PROPORTION * self.GROWTH_SUCCESS_RATE
+
+            mean = 26.5
+            std = 5.5
+
+            age = snapshot_day - day # work backwards
+            surviving_males = new_males * self.find_weibull_survival_probability(age, mean, std)
+            age_distribution[age] += surviving_males
+
+        return age_distribution
+
+    def initial_population(self, t: int, starting_population: float) -> tuple[list[float], list[float], list[float]]:
         """A function to model the initial population over time
 
         :param t: The number of days to model the initial population over
@@ -386,42 +409,65 @@ class BeePopulationModel:
         :param starting_population: The initial population size
         :type starting_population: float
         :raises ValueError: If the starting population is zero or the age distribution is empty
-        :return: A list of population sizes for each day
-        :rtype: list[float]
+        :return: A tuple containing three lists: total population, female population, and male population for each day
+        :rtype: tuple[list[float], list[float], list[float]]
         """
         # we begin by finding the age distribution at the start date when the initial population is introduced
-        age_distribution = self.get_female_age_distribution(730) # offset by two years to remove any initial deviation
+        female_age_distribution = self.get_female_age_distribution(730) # offset by two years to remove any initial deviation
+        male_age_distribution = self.get_male_age_distribution(730) # offset by two years to remove any initial deviation
 
         # now we need to scale
-        total = sum(age_distribution.values())
+        total = sum(female_age_distribution.values()) + sum(male_age_distribution.values())
         if total == 0:
             raise ValueError("Starting population is zero or age distribution is empty")
 
         scale_factor = starting_population / total
-        scaled_age_distribution = {age: count * scale_factor for age, count in age_distribution.items()}
+        scaled_female_age_distribution = {age: count * scale_factor for age, count in female_age_distribution.items()}
+        scaled_male_age_distribution = {age: count * scale_factor for age, count in male_age_distribution.items()}
 
-        age_groups = []
-        for age, count in scaled_age_distribution.items():
+        female_age_groups = []
+        for age, count in scaled_female_age_distribution.items():
             emergence_day = self.START_DATE - 1 - age
             mean = self.get_female_means(emergence_day)
             std = self.get_female_stds(emergence_day)
 
             survival_prob_start = self.find_weibull_survival_probability(age, mean, std)
-            age_groups.append((age, count, mean, std, survival_prob_start))
+            female_age_groups.append((age, count, mean, std, survival_prob_start))
+
+        male_age_groups = []
+        for age, count in scaled_male_age_distribution.items():
+            mean = 26.5
+            std = 5.5
+
+            survival_prob_start = self.find_weibull_survival_probability(age, mean, std)
+            male_age_groups.append((age, count, survival_prob_start))
 
         population_history = []
+        female_population_history = []
+        male_population_history = []
         for day in range(t):
             population = 0
-            for age, count, mean, std, survival_prob_start in age_groups:
+            female_population = 0
+            male_population = 0
+            for age, count, mean, std, survival_prob_start in female_age_groups:
                 if survival_prob_start == 0:
                     continue
                 survival_prob_now = self.find_weibull_survival_probability(age + day, mean, std)
                 # we divide so we don't double count the survival probability from the start
-                population += count * survival_prob_now / survival_prob_start 
+                female_population += count * survival_prob_now / survival_prob_start 
 
+            for age, count, survival_prob_start in male_age_groups:
+                if survival_prob_start == 0:
+                    continue
+                survival_prob_now = self.find_weibull_survival_probability(age + day, 26.5, 5.5)
+                male_population += count * survival_prob_now / survival_prob_start
+
+            population = female_population + male_population
             population_history.append(population)
+            female_population_history.append(female_population)
+            male_population_history.append(male_population)
 
-        return population_history
+        return population_history, female_population_history, male_population_history
         
     def main(self, graph: bool = True) -> tuple[list[float], list[float], list[float], list[float], list[float]]:
         """Run the simulation and optionally graph the results
@@ -447,7 +493,7 @@ class BeePopulationModel:
         adult_male_population_history = [male * self.MALE_PROPORTION for male in adult_male_population_history]
 
         # find initial population and how it falls off over time
-        initial_population_history = self.initial_population(self.TIME_SPAN, self.INITIAL_POPULATION)
+        initial_population_history, _, _ = self.initial_population(self.TIME_SPAN, self.INITIAL_POPULATION)
         
         # all initial bees are female, so add to the female population history
         adult_female_population_history = [female + initial for female, initial in zip(adult_female_population_history, initial_population_history)]
@@ -573,10 +619,16 @@ class BeePopulationModel:
         plt.xticks(month_starts, month_labels, rotation=45)
         plt.show()
 
-    def graph_initial_population(self):
-        initial_population = self.initial_population(self.TIME_SPAN, self.INITIAL_POPULATION)
+    def graph_initial_population(self, graph_separate: bool = False):
+        initial_population, female_split, male_split = self.initial_population(self.TIME_SPAN, self.INITIAL_POPULATION)
 
-        plt.plot(range(self.TIME_SPAN), initial_population, label="Initial Population", color="blue", linewidth=2.5)
+        if graph_separate:
+            plt.plot(range(self.TIME_SPAN), initial_population, label="Total Initial Population", color="green", linewidth=3.5)
+            plt.plot(range(self.TIME_SPAN), female_split, label="Initial Female Population", color="red", linewidth=2.5)
+            plt.plot(range(self.TIME_SPAN), male_split, label="Initial Male Population", color="blue", linewidth=2.5)
+        else:
+            plt.plot(range(self.TIME_SPAN), initial_population, label="Initial Population", color="green", linewidth=2.5)
+
         plt.title("Initial Population Over Time")
         plt.xlabel("Time (days)")
         plt.ylabel("Population (Bees)")
