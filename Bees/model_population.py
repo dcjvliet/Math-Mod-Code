@@ -17,7 +17,6 @@ class BeePopulationModel:
                 male_growth_duration: int = 24,
                 growth_success_rate: float = 0.85,
                 egg_laying_multiplier: float = 1,
-                zero_day: int = 300,
                 female_winter_lifespan: float = 150,
                 start_date: int = 1,
             ):
@@ -39,8 +38,6 @@ class BeePopulationModel:
         :type growth_success_rate: float, optional
         :param egg_laying_multiplier: Multiplier for the egg laying rate (used for sensitivity analysis), defaults to 1
         :type egg_laying_multiplier: float, optional
-        :param zero_day: The day when the egg laying rate hits zero in the winter (used for sensitivity analysis), defaults to 300
-        :type zero_day: int, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
         :param start_date: The starting day of the simulation, defaults to 1
@@ -54,7 +51,6 @@ class BeePopulationModel:
         self.MALE_GROWTH_DURATION = male_growth_duration
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
-        self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
         self.START_DATE = start_date
 
@@ -257,7 +253,7 @@ class BeePopulationModel:
         plt.show()
         return
 
-    def get_egg_laying_rate(self, t: float, zero_point: int = 300) -> float:
+    def get_egg_laying_rate(self, t: float) -> float:
         """Get the egg laying rate at a given time
 
         :param t: The time since january 1st in days
@@ -369,7 +365,7 @@ class BeePopulationModel:
         age_dsitribution = {age: 0.0 for age in range(snapshot_day + 1)}
         for day in range(self.FEMALE_GROWTH_DURATION, snapshot_day + 1):
             egg_day = day - self.FEMALE_GROWTH_DURATION
-            eggs = self.get_egg_laying_rate(egg_day + self.START_DATE - 1, self.ZERO_DAY)
+            eggs = self.get_egg_laying_rate(egg_day + self.START_DATE - 1)
             new_females = eggs * self.FEMALE_PROPORTION * self.GROWTH_SUCCESS_RATE
 
             calendar_day = day + self.START_DATE - 1
@@ -437,7 +433,7 @@ class BeePopulationModel:
         """
         # get the egg laying rate for the time period
         egg_history = np.array([
-            self.get_egg_laying_rate(day + self.START_DATE - 1, self.ZERO_DAY) for day in range(self.TIME_SPAN)
+            self.get_egg_laying_rate(day + self.START_DATE - 1) for day in range(self.TIME_SPAN)
         ])
 
         # find female population and scale by FEMALE_PROPORTION to account for male:female ratio
@@ -511,7 +507,7 @@ class BeePopulationModel:
 
     def graph_egg_laying_rate(self) -> None:
         days = range(365)
-        egg_laying_rates = [self.get_egg_laying_rate(day, self.ZERO_DAY) for day in days]
+        egg_laying_rates = [self.get_egg_laying_rate(day) for day in days]
 
         plt.plot(days, egg_laying_rates, label="Egg Laying Rate", color="green", linewidth=2.5)
         plt.title("Egg Laying Rate over Time")

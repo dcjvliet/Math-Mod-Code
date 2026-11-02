@@ -42,8 +42,6 @@ class SensitivityAnalysis:
         :type growth_success_rate: float, optional
         :param egg_laying_multiplier: Multiplier for the egg laying rate (used for sensitivity analysis), defaults to 1
         :type egg_laying_multiplier: float, optional
-        :param zero_day: The day when the egg laying rate hits zero in the winter (used for sensitivity analysis), defaults to 300
-        :type zero_day: int, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
         :param start_date: The starting day of the simulation, defaults to 1
@@ -57,7 +55,6 @@ class SensitivityAnalysis:
         self.MALE_GROWTH_DURATION = male_growth_duration
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
-        self.ZERO_DAY = zero_day
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
         self.START_DATE = start_date
 
@@ -99,7 +96,6 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=multiplier,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
                 start_date=self.START_DATE
             )
@@ -175,7 +171,6 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=new_success_rate,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
                 start_date=self.START_DATE
             )
@@ -220,90 +215,6 @@ class SensitivityAnalysis:
 
         return error, peak_populations
 
-    def vary_egg_laying_rate_cutoff(self, graph: bool = False) -> tuple[float, list[float]]:
-        """A function to see how average population changes with when the egg laying rate reaches 0 in the winter
-
-        :param graph: Whether or not to graph the results, defaults to False
-        :type graph: bool, optional
-        :return: A tuple containing the error from a linear fit (NMSE, normalized with mean) and a list of average populations after the egg laying rate starts declining for each trial
-        :rtype: tuple[float, list[float]]
-        """
-        average_populations = []
-        for zero_day in range(229, 345): # we start decreasing at 229, and increase starting at 350, so we look at range in between
-            model = BeePopulationModel(
-                time_span=self.TIME_SPAN,
-                initial_population=self.INITIAL_POPULATION,
-                female_proportion=self.FEMALE_PROPORTION,
-                male_proportion=self.MALE_PROPORTION,
-                female_growth_duration=self.FEMALE_GROWTH_DURATION,
-                male_growth_duration=self.MALE_GROWTH_DURATION,
-                growth_success_rate=self.GROWTH_SUCCESS_RATE,
-                egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=zero_day,
-                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
-                start_date=self.START_DATE
-            )
-            bf, bm, af, am, _ = model.main(graph=False)
-            total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
-            total_population = total_population[593:] # only look at population after egg laying rate starts declining until the end of the year
-            average_populations.append(sum(total_population) / len(total_population)) # average population after egg laying rate starts declining
-
-        # calculate its difference from a line
-        x = np.array(range(229, 345))
-        y = np.array(average_populations)
-        A = np.vstack([x, np.ones(len(x))]).T
-        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
-        error = 0
-        for x_value, y_value in zip(x, y):
-            error += abs(y_value - (m * x_value + c))
-
-        error /= len(x)
-        mean = sum(y) / len(y)
-        error /= mean ** 2 # normalize by mean squared
-        estimated_y = np.array([m * x_value + c for x_value in x])
-
-        if graph:
-            annotation_x = x[int(len(x) / 1.5)]
-            plt.annotate(
-                f"y = {m:.2f}x {'+' if c >= 0 else '-'} {abs(c):.2f}",
-                xy=(annotation_x, m * annotation_x + c),
-                xytext=(0.65, 0.4),
-                textcoords="axes fraction",
-                fontsize=16,
-                ha="center",
-                bbox=dict(boxstyle="round,pad=0.4", facecolor="white", edgecolor="blue"),
-                arrowprops=dict(arrowstyle="-", color="blue"),
-            )
-
-            plt.plot(range(229, 345), average_populations, color='blue', linewidth=2.5, label='Simulation Data')
-            plt.plot(x, estimated_y, color='green', linewidth=1.5, label='Linear Fit')
-            plt.xlabel('Day Egg Laying Rate Hits Zero (Zero Day)')
-            plt.ylabel('Average Population (After Egg Laying Rate Declines) (Bees)')
-            plt.title('Average Population vs Zero Day')
-            plt.legend()
-            plt.text(245, (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (log(NMSE)):\n ≈{np.log(error):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
-            plt.grid()
-
-            # code for changing over to months
-            month_names = list(calendar.month_abbr)[1:]
-            month_starts = []
-            month_labels = []
-            month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
-
-            for day in range(229, 345):
-                year_day = day % 365
-
-                if year_day in month_start_days:
-                    month_starts.append(day)
-                    month_labels.append(month_names[month_start_days.index(year_day)])
-
-            plt.xticks(month_starts, month_labels, rotation=45)
-
-            plt.legend()
-            plt.show()
-
-        return error, average_populations
-
     def vary_male_female_proportion(self, lowest_male_proportion: float = 0.025, highest_male_proportion: float = 0.15, graph: bool = False, trials: int = 100) -> list[list[float]]:
         """A function to see how population is affected by the male vs female proportion
 
@@ -330,7 +241,6 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
                 start_date=self.START_DATE
             )
@@ -410,7 +320,6 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
                 start_date=self.START_DATE
             )
@@ -428,7 +337,6 @@ class SensitivityAnalysis:
                 male_growth_duration=male_growth_duration,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
                 start_date=self.START_DATE
             )
@@ -541,7 +449,6 @@ class SensitivityAnalysis:
                 male_growth_duration=self.MALE_GROWTH_DURATION,
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
-                zero_day=self.ZERO_DAY,
                 female_winter_lifespan=new_lifespan,
                 start_date=self.START_DATE
             )
