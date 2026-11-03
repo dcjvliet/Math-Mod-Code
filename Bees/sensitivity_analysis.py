@@ -20,7 +20,6 @@ class SensitivityAnalysis:
                     male_growth_duration: int = 24,
                     growth_success_rate: float = 0.85,
                     egg_laying_multiplier: float = 1,
-                    zero_day: int = 300,
                     female_winter_lifespan: float = 150,
                     start_date: int = 1,
                 ):
