@@ -472,7 +472,7 @@ class SensitivityAnalysis:
                 lifespans, population_histories
             ):
                 ax.plot(
-                    np.arange(len(population_history)),
+                    np.arange(self.START_DATE - 1, self.START_DATE - 1 + len(population_history)),
                     population_history,
                     color=cmap(norm(lifespan)),
                     linewidth=1,
@@ -496,7 +496,7 @@ class SensitivityAnalysis:
                 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
             ]
 
-            for day in range(self.TIME_SPAN + 1):
+            for day in range(self.START_DATE - 1, self.START_DATE + self.TIME_SPAN):
                 year_day = day % 365
 
                 if year_day in month_start_days:
