@@ -21,6 +21,7 @@ class SensitivityAnalysis:
                     growth_success_rate: float = 0.85,
                     egg_laying_multiplier: float = 1,
                     female_winter_lifespan: float = 150,
+                    female_winter_standard_deviation: float = 30,
                     start_date: int = 1,
                 ):
         """Initialize a SensitivityAnalysis object
@@ -43,6 +44,8 @@ class SensitivityAnalysis:
         :type egg_laying_multiplier: float, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
+        :param female_winter_standard_deviation: The standard deviation of the female bee lifespan during the winter, defaults to 30
+        :type female_winter_standard_deviation: float, optional
         :param start_date: The starting day of the simulation, defaults to 1
         :type start_date: int, optional
         """
@@ -55,6 +58,7 @@ class SensitivityAnalysis:
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
+        self.FEMALE_WINTER_STANDARD_DEVIATION = female_winter_standard_deviation
         self.START_DATE = start_date
 
         plt.rcParams.update({
@@ -96,6 +100,7 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=multiplier,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
                 start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
@@ -171,6 +176,7 @@ class SensitivityAnalysis:
                 growth_success_rate=new_success_rate,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
                 start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
@@ -241,6 +247,7 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
                 start_date=self.START_DATE
             )
 
@@ -320,6 +327,7 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
                 start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
@@ -337,6 +345,7 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
                 start_date=self.START_DATE
             )
             bf, bm, af, am, _ = model.main(graph=False)
@@ -438,6 +447,7 @@ class SensitivityAnalysis:
 
         for i in range(trials):
             new_lifespan = (1 + (i - (trials // 2)) * (variation_range / (trials // 2))) * self.FEMALE_WINTER_LIFESPAN
+            new_standard_dev = new_lifespan * (self.FEMALE_WINTER_STANDARD_DEVIATION / self.FEMALE_WINTER_LIFESPAN)
 
             model = BeePopulationModel(
                 time_span=self.TIME_SPAN,
@@ -449,6 +459,7 @@ class SensitivityAnalysis:
                 growth_success_rate=self.GROWTH_SUCCESS_RATE,
                 egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
                 female_winter_lifespan=new_lifespan,
+                female_winter_standard_deviation=new_standard_dev,
                 start_date=self.START_DATE
             )
 
@@ -482,7 +493,24 @@ class SensitivityAnalysis:
                 ScalarMappable(norm=norm, cmap=cmap),
                 ax=ax,
             )
-            colorbar.set_label("Female winter lifespan (days)")
+
+            colorbar.ax.yaxis.set_ticks_position('left')
+            colorbar.ax.yaxis.set_label_position('left')
+            colorbar.set_label('Mean female winter lifespan (days)')
+
+            std_ratio = (
+                self.FEMALE_WINTER_STANDARD_DEVIATION
+                / self.FEMALE_WINTER_LIFESPAN
+            )
+
+            std_axis = colorbar.ax.secondary_yaxis(
+                'right',
+                functions=(
+                    lambda mean: np.asarray(mean, dtype=float) * std_ratio,
+                    lambda std: np.asarray(std, dtype=float) / std_ratio,
+                ),
+            )
+            std_axis.set_ylabel('Female winter lifespan standard deviation (days)')
 
             ax.set_title("Female Population Over Time by Female Winter Lifespan")
             ax.set_xlabel("Time (days)")

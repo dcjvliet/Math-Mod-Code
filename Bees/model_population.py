@@ -18,6 +18,7 @@ class BeePopulationModel:
                 growth_success_rate: float = 0.85,
                 egg_laying_multiplier: float = 1,
                 female_winter_lifespan: float = 150,
+                female_winter_standard_deviation: float = 30,
                 start_date: int = 1,
             ):
         """Initialize a BeePopulationModel object
@@ -40,6 +41,8 @@ class BeePopulationModel:
         :type egg_laying_multiplier: float, optional
         :param female_winter_lifespan: The average lifespan of a female bee during the winter, defaults to 150
         :type female_winter_lifespan: float, optional
+        :param female_winter_standard_deviation: The standard deviation of the female bee lifespan during the winter, defaults to 30
+        :type female_winter_standard_deviation: float, optional
         :param start_date: The starting day of the simulation, defaults to 1
         :type start_date: int, optional
         """
@@ -52,6 +55,7 @@ class BeePopulationModel:
         self.GROWTH_SUCCESS_RATE = growth_success_rate
         self.EGG_LAYING_MULTIPLIER = egg_laying_multiplier
         self.FEMALE_WINTER_LIFESPAN = female_winter_lifespan
+        self.FEMALE_WINTER_STANDARD_DEVIATION = female_winter_standard_deviation
         self.START_DATE = start_date
 
         # set up label sizes to be bigger
@@ -285,7 +289,7 @@ class BeePopulationModel:
         :return: The standard deviation in lifespan for a female bee at the specified time
         :rtype: float
         """
-        anchor_stds = [30, 30, 30, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, 30, 30, 30]
+        anchor_stds = [self.FEMALE_WINTER_STANDARD_DEVIATION, self.FEMALE_WINTER_STANDARD_DEVIATION, self.FEMALE_WINTER_STANDARD_DEVIATION, 1.89, 4.64, 3.91, 3.6, 2.06, 5.08, self.FEMALE_WINTER_STANDARD_DEVIATION, self.FEMALE_WINTER_STANDARD_DEVIATION, self.FEMALE_WINTER_STANDARD_DEVIATION]
         anchor_points = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
         return np.interp(t % 365, anchor_points, anchor_stds, period=365)
 
