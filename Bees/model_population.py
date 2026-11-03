@@ -168,7 +168,7 @@ class BeePopulationModel:
 
                 ax.set_title(f"{label} Population", loc="left")
                 ax.set_xlabel("Time (days)")
-                ax.set_ylabel("Population")
+                ax.set_ylabel("Population (Bees)")
 
                 # Put the legend above the plotting area.
                 ax.legend(
@@ -523,14 +523,14 @@ class BeePopulationModel:
 
         axes[0].plot(days, means, label="Female mean life expectancy", color="blue", linewidth=2.5)
         axes[0].set_title("Mean Female Life Expectancy over Time")
-        axes[0].set_ylabel("Mean life expectancy")
+        axes[0].set_ylabel("Mean life expectancy (days)")
         axes[0].legend()
         axes[0].grid(True, alpha=0.3)
 
         axes[1].plot(days, stds, label="Female life expectancy SD", color="orange", linewidth=2.5)
         axes[1].set_title("Standard Deviation of Female Life Expectancy over Time")
         axes[1].set_xlabel("Day")
-        axes[1].set_ylabel("Standard deviation")
+        axes[1].set_ylabel("Standard deviation (days)")
         axes[1].legend()
         axes[1].grid(True, alpha=0.3)
 
@@ -558,7 +558,7 @@ class BeePopulationModel:
         plt.plot(days, egg_laying_rates, label="Egg Laying Rate", color="green", linewidth=2.5)
         plt.title("Egg Laying Rate over Time")
         plt.xlabel("Day")
-        plt.ylabel("Egg Laying Rate")
+        plt.ylabel("Egg Laying Rate (eggs/day)")
         plt.legend()
         plt.grid(True, alpha=0.3)
         
