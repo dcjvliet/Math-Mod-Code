@@ -539,4 +539,66 @@ class SensitivityAnalysis:
             plt.show()
 
         return population_histories
+
+    def vary_female_standard_deviation(self, lowest_female_standard_deviation: float = 10, highest_female_standard_deviation: float = 30, graph: bool = False, trials: int = 101) -> list[list[float]]:
+        population_histories = []
+
+        for female_standard_deviation in np.linspace(lowest_female_standard_deviation, highest_female_standard_deviation, trials):
+            model = BeePopulationModel(
+                time_span=self.TIME_SPAN,
+                initial_population=self.INITIAL_POPULATION,
+                female_proportion=0.925,
+                male_proportion=0.075,
+                female_growth_duration=self.FEMALE_GROWTH_DURATION,
+                male_growth_duration=self.MALE_GROWTH_DURATION,
+                growth_success_rate=self.GROWTH_SUCCESS_RATE,
+                egg_laying_multiplier=self.EGG_LAYING_MULTIPLIER,
+                female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+                female_winter_standard_deviation=female_standard_deviation,
+                start_date=self.START_DATE
+            )
+
+            bf, bm, af, am, _ = model.main(graph=False)
+            total_population = np.sum(np.asarray([bf, bm, af, am], dtype=float), axis=0).tolist()
+            population_histories.append(total_population)
+
+        if graph:
+            fig, ax = plt.subplots(figsize=(11, 6), constrained_layout=True)
+
+            cmap = plt.get_cmap("coolwarm")
+            norm = Normalize(vmin=lowest_female_standard_deviation, vmax=highest_female_standard_deviation)
+
+            for female_standard_deviation, population_history in zip(np.linspace(lowest_female_standard_deviation, highest_female_standard_deviation, trials), population_histories):
+                ax.plot(
+                    np.arange(self.START_DATE - 1, self.START_DATE - 1 + len(population_history)),
+                    population_history,
+                    color=cmap(norm(female_standard_deviation)),
+                    linewidth=1
+                )
+
+            colorbar = fig.colorbar(ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+            colorbar.set_label("Female Winter Lifespan Standard Deviation")
+
+            ax.set_title("Bee Population Over Time by Female Winter Lifespan Standard Deviation")
+            ax.set_xlabel("Time (days)")
+            ax.set_ylabel("Total Population (bees)")
+            ax.grid(True, alpha=0.25)
+
+            month_names = list(calendar.month_abbr)[1:]
+            month_starts = []
+            month_labels = []
+            month_start_days = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+
+            for day in range(self.START_DATE - 1, self.START_DATE + self.TIME_SPAN):
+                year_day = day % 365
+
+                if year_day in month_start_days:
+                    month_starts.append(day)
+                    month_labels.append(month_names[month_start_days.index(year_day)])
+
+            plt.xticks(month_starts, month_labels, rotation=45)
+
+            plt.show()
+
+        return population_histories
     
