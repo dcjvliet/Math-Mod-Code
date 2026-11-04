@@ -11,6 +11,8 @@ pollinators-own [
   flowers-pollinated-today?
   returning-to-hive?
   finished-foraging?
+  hive-x
+  hive-y
 ]
 
 to setup
@@ -33,15 +35,22 @@ to setup
     setxy (col * 4 + 1.5) (7 * row + 3)
   ]
 
-  create-pollinators (700 * num-hives) [
-    setxy 62 35
-    set heading random 360
-    set color yellow
-    set shape "bee"
-    set size 3
-    set flowers-pollinated-today? 0
-    set returning-to-hive? false
-    set finished-foraging? false
+  repeat num-hives [
+    let hx (random-float 80 + 20)
+    let hy (random-float 30 + 20)
+
+    create-pollinators 700 [
+      set hive-x hx
+      set hive-y hy
+      setxy hive-x hive-y
+      set heading random 360
+      set color yellow
+      set shape "bee"
+      set size 3
+      set flowers-pollinated-today? 0
+      set returning-to-hive? false
+      set finished-foraging? false
+    ]
   ]
 
   reset-ticks
@@ -57,47 +66,46 @@ to go
     ]
 
     ask pollinators [
-      setxy 62 35
+      setxy hive-x hive-y
       set heading random 360
-      
       set flowers-pollinated-today? 0
       set returning-to-hive? false
       set finished-foraging? false
-
     ]
   ]
 
-ask pollinators [
-  if not finished-foraging? [
+  ask pollinators [
+    if not finished-foraging? [
 
-    ; Return to hive after pollinating 10 flowers
-    if flowers-pollinated-today? >= 10 [
-      set returning-to-hive? true
-    ]
-
-    if returning-to-hive? [
-      facexy 62 35
-      fd 2.5
-
-      if distancexy 62 35 < 3 [
-        setxy 62 35
-        set finished-foraging? true
-      ]
-    ]
-
-    if not returning-to-hive? [
-      rt random 360
-      fd random-float 31.6
-
-      let target one-of flowers in-radius 1 with [
-        pollinated-today? < 8
+      ; Return to hive after pollinating 20 flowers
+      if flowers-pollinated-today? >= 20 [
+        set returning-to-hive? true
       ]
 
-      if target != nobody [
-        if random 2 = 0 [
+      if returning-to-hive? [
+        facexy hive-x hive-y
+        fd 2.5
+
+        if distancexy hive-x hive-y < 3 [
+          setxy hive-x hive-y
+          set finished-foraging? true
+        ]
+      ]
+
+      if not returning-to-hive? [
+        rt random 360
+        fd random-float 12.3
+
+        let target one-of flowers in-radius 0.8 with [
+          pollinated-today? < 8
+        ]
+
+        if target != nobody [
           ask target [
-            set pollinated-today? (pollinated-today? + 1)
-              if pollinated-today? >= 8 [set color blue]
+            set pollinated-today? pollinated-today? + 1
+            if pollinated-today? >= 8 [
+              set color blue
+            ]
           ]
 
           set flowers-pollinated-today?
@@ -110,7 +118,7 @@ ask pollinators [
       ]
     ]
   ]
-]
+
   tick
 end
 
@@ -126,7 +134,8 @@ to-report percent-pollinated
   ] [
     report 0
   ]
-end]]></code>
+end
+]]></code>
   <widgets>
     <view x="285" wrappingAllowedX="false" y="15" frameRate="0.3" minPycor="0" height="535" showTickCounter="true" patchSize="7.48" fontSize="10" wrappingAllowedY="false" width="939" tickCounterLabel="ticks" maxPycor="70" updateMode="0" maxPxcor="124" minPxcor="0"></view>
     <button x="15" y="20" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55">setup
