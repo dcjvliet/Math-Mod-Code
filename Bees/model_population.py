@@ -703,4 +703,5 @@ class BeePopulationModel:
         ax.set_axisbelow(True)
 
         fig.tight_layout(rect=(0, 0, 0.9, 0.94))
+        plt.legend(loc='upper left')
         plt.show()

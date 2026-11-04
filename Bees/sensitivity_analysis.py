@@ -258,8 +258,8 @@ class SensitivityAnalysis:
 
             plt.plot(x, y, color='green', linewidth=2.5, label='Simulation Data')
             plt.xlabel('Growth Success Rate (%)')
-            plt.ylabel('Peak Population (Bees)')
-            plt.title('Peak Population vs Growth Success Rate')
+            plt.ylabel('Average Percentage Variation of Population (Bees)')
+            plt.title('Average Percentage Variation of Population vs Growth Success Rate')
             plt.text(100 * (self.GROWTH_SUCCESS_RATE * (1 - variation_range * 0.75)), (max(y) - min(y)) * 0.90 + min(y), f'Error (log(1-R²)):\n ≈{float(np.log(1 - r_squared)):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
