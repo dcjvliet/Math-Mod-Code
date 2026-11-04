@@ -169,7 +169,7 @@ class SensitivityAnalysis:
 
         return percentage_variations, stdevs
 
-    def vary_growth_success_rate(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[float, list[float]]:
+    def vary_growth_success_rate(self, variation_range: float = 0.1, graph: bool = False, trials: int = 101) -> tuple[list[float], list[float]]:
         """A function to model how peak population changes with chance of survival to adulthood
 
         :param variation_range: The multiplier for the growth success rate (will test 1 +- variation_range), defaults to 0.1
@@ -183,9 +183,27 @@ class SensitivityAnalysis:
         """
         # we want to see how the population changes if our growth success rate is slightly off
         # we will use peak population as a measure for each model
-        peak_populations = []
+        percent_differences = []
+        stdevs = []
         if trials % 2 == 0:
             trials += 1
+
+        base_population_history = []
+        base_model = BeePopulationModel(
+            time_span=self.TIME_SPAN,
+            initial_population=self.INITIAL_POPULATION,
+            female_proportion=self.FEMALE_PROPORTION,
+            male_proportion=self.MALE_PROPORTION,
+            female_growth_duration=self.FEMALE_GROWTH_DURATION,
+            male_growth_duration=self.MALE_GROWTH_DURATION,
+            growth_success_rate=self.GROWTH_SUCCESS_RATE,
+            egg_laying_multiplier=1,
+            female_winter_lifespan=self.FEMALE_WINTER_LIFESPAN,
+            female_winter_standard_deviation=self.FEMALE_WINTER_STANDARD_DEVIATION,
+            start_date=self.START_DATE
+        )
+        bf, bm, af, am, _ = base_model.main(graph=False)
+        base_population_history = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
 
         for i in range(trials):
             new_success_rate = (1 + (i - (trials // 2)) * (variation_range / (trials // 2))) * self.GROWTH_SUCCESS_RATE
@@ -205,20 +223,25 @@ class SensitivityAnalysis:
             )
             bf, bm, af, am, _ = model.main(graph=False)
             total_population = [b + a + m + j for b, a, m, j in zip(bf, af, bm, am)]
-            peak_populations.append(max(total_population))
+            trial_variations = []
+            for i, pop in enumerate(total_population):
+                trial_variations.append(pop / base_population_history[i])
+            percent_differences.append(sum(trial_variations) / len(trial_variations))
+
+            for i, variation in enumerate(trial_variations):
+                trial_variations[i] = variation - 1 # scale to percentage variation for stdev calc
+            stdevs.append(np.std(trial_variations))
 
         # calculate its difference from a line
-        x = np.array([(1 + (i - (trials // 2)) * (variation_range / (trials // 2))) * self.GROWTH_SUCCESS_RATE for i in range(trials)])
-        y = np.array(peak_populations)
+        x = np.array([(1 + (i - (trials // 2)) * (variation_range / (trials // 2))) * self.GROWTH_SUCCESS_RATE for i in range(trials)]) * 100 # make percent
+        y = (np.array(percent_differences) * 100) - 100
         A = np.vstack([x, np.ones(len(x))]).T
         m, c = np.linalg.lstsq(A, y, rcond=None)[0]
-        error = 0
-        for x_value, y_value in zip(x, y):
-            error += abs(y_value - (m * x_value + c))
-
-        error /= len(x)
-        mean = sum(y) / len(y)
-        error /= mean ** 2 # normalize by mean squared
+        predicted_y = m * x + c
+        sum_residuals_squared = np.sum((y - predicted_y) ** 2)
+        mean = np.mean(y)
+        sum_distance_squared = np.sum((y - mean) ** 2)
+        r_squared = 1 - (sum_residuals_squared / sum_distance_squared)
 
         if graph:
             annotation_x = x[int(len(x) / 1.5)]
@@ -234,15 +257,15 @@ class SensitivityAnalysis:
             )
 
             plt.plot(x, y, color='green', linewidth=2.5, label='Simulation Data')
-            plt.xlabel('Growth Success Rate')
+            plt.xlabel('Growth Success Rate (%)')
             plt.ylabel('Peak Population (Bees)')
             plt.title('Peak Population vs Growth Success Rate')
-            plt.text(0.85 * (1 - variation_range * 0.75), (max(y) - min(y)) * 0.90 + min(y), f'Error from linear fit (ln(NMSE)):\n ≈{np.log(error):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
+            plt.text(100 * (self.GROWTH_SUCCESS_RATE * (1 - variation_range * 0.75)), (max(y) - min(y)) * 0.90 + min(y), f'Error (log(1-R²)):\n ≈{float(np.log(1 - r_squared)):.2f}', fontsize=16, color='black', ha='center', va='center', bbox=dict(facecolor='white', alpha=0.75))
             plt.grid()
             plt.legend()
             plt.show()
 
-        return error, peak_populations
+        return percent_differences, stdevs
 
     def vary_male_female_proportion(self, lowest_male_proportion: float = 0.025, highest_male_proportion: float = 0.15, graph: bool = False, trials: int = 100) -> list[list[float]]:
         """A function to see how population is affected by the male vs female proportion
