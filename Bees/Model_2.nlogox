@@ -36,10 +36,10 @@ to setup
   ]
 
   repeat num-hives [
-    let hx (random-float 80 + 20)
-    let hy (random-float 30 + 20)
+    let hx random-float 124
+    let hy random-float 70
 
-    create-pollinators 700 [
+    create-pollinators 592 [
       set hive-x hx
       set hive-y hy
       setxy hive-x hive-y
@@ -77,7 +77,6 @@ to go
   ask pollinators [
     if not finished-foraging? [
 
-      ; Return to hive after pollinating 20 flowers
       if flowers-pollinated-today? >= 20 [
         set returning-to-hive? true
       ]
@@ -96,7 +95,7 @@ to go
         rt random 360
         fd random-float 12.3
 
-        let target one-of flowers in-radius 0.8 with [
+        let target one-of flowers in-radius 0.82 with [
           pollinated-today? < 8
         ]
 
@@ -142,7 +141,7 @@ end
 </button>
     <button x="15" y="65" height="40" disableUntilTicks="false" forever="false" kind="Observer" width="55">go</button>
     <button x="15" y="110" height="40" disableUntilTicks="false" forever="true" kind="Observer" width="55">go</button>
-    <slider x="20" step="1" y="175" max="5" width="250" display="num-hives" height="50" min="0" direction="Horizontal" default="1.0" variable="num-hives"></slider>
+    <slider x="20" step="1" y="175" max="5" width="250" display="num-hives" height="50" min="0" direction="Horizontal" default="2.0" variable="num-hives"></slider>
     <plot x="10" autoPlotX="true" yMax="100.0" autoPlotY="true" y="260" xMin="0.0" height="285" legend="false" xMax="400.0" yMin="0.0" width="270" display="plot 1">
       <setup></setup>
       <update></update>
